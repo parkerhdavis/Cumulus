@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
+    network_mode: host
     environment:
       - PANGOLIN_ENDPOINT=https://pangolin.parkerhdavis.com
       - NEWT_ID=${NEWT_ID}
