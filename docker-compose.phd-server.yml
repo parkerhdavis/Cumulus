@@ -3,6 +3,8 @@ services:
     image: fosrl/newt
     container_name: newt
     restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
     environment:
       - PANGOLIN_ENDPOINT=https://pangolin.parkerhdavis.com
       - NEWT_ID=${NEWT_ID}
