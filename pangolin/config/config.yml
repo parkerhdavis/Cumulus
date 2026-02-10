@@ -1,6 +1,6 @@
 app:
   dashboard_url: "https://pangolin.parkerhdavis.com"
-  log_level: "info"
+  log_level: "debug"
   save_logs: false
 
 server:
