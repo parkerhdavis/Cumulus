@@ -1,0 +1,16 @@
+# Claude
+.claude/
+CLAUDE.md
+
+# Environment
+.env
+
+# Pangolin auto-generated files
+pangolin/config/db/
+pangolin/config/key
+pangolin/config/letsencrypt/
+pangolin/config/traefik/logs/
+
+# OS
+.DS_Store
+.directory
