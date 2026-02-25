@@ -9,7 +9,9 @@ RUN useradd -m -s /bin/bash anytype
 USER anytype
 WORKDIR /home/anytype
 
-RUN curl -sSf https://raw.githubusercontent.com/anyproto/anytype-cli/HEAD/install.sh | sh
+RUN curl -sSf https://raw.githubusercontent.com/anyproto/anytype-cli/HEAD/install.sh | bash
+
+RUN mkdir -p /home/anytype/.anytype
 
 ENV PATH="/home/anytype/.local/bin:${PATH}"
 
