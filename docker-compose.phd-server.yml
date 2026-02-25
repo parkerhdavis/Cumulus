@@ -47,4 +47,3 @@ volumes:
   jellyfin-cache:
     external: true
   anytype-data:
-    external: true

@@ -26,13 +26,13 @@ Once the container is running, exec in to create an account and API key:
 
 ```sh
 # Create a bot account
-docker exec -it anytype anytype auth create <bot-name>
+docker exec -it anytype anytype auth create anybot
 
 # Join a space via invite link
-docker exec -it anytype anytype space join <invite-link>
+docker exec -it anytype anytype space join https://invite.any.coop/bafybeigc5g6r4khpk3upg747rhalxzz3pplxydabqxl3m4wowu6kjgu5jy#DXkS2ovPsD5HxM8xnM7Y3TAiYcevm72BUUVA9vyEKj5g
 
 # Create an API key for programmatic access
-docker exec -it anytype anytype auth apikey create <key-name>
+docker exec -it anytype anytype auth apikey create ROjhkNKcd39nOGab7MydOllqWE8VL3zHFyuTM9yoWi8=
 ```
 
 ## Pangolin Routing
