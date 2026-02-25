@@ -26,8 +26,25 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
 
+  # Anytype CLI — headless Anytype server exposing an HTTP API.
+  # After first boot, exec into the container to set up auth:
+  #   docker exec -it anytype anytype auth create <bot-name>
+  #   docker exec -it anytype anytype space join <invite-link>
+  #   docker exec -it anytype anytype auth apikey create <key-name>
+  # Pangolin routing: add a resource in the dashboard pointing to localhost:31012.
+  anytype:
+    build: ./anytype
+    container_name: anytype
+    restart: unless-stopped
+    ports:
+      - 31012:31012
+    volumes:
+      - anytype-data:/home/anytype/.anytype
+
 volumes:
   jellyfin-config:
     external: true
   jellyfin-cache:
+    external: true
+  anytype-data:
     external: true
