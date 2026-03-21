@@ -4,6 +4,7 @@ CLAUDE.md
 
 # Environment
 .env
+.env.backup
 
 # Pangolin auto-generated files
 pangolin/config/config.yml
