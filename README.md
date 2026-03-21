@@ -27,7 +27,7 @@ The stack is split across two hosts, each with its own compose file:
 
 ### How it all fits together
 
-On the Droplet: Pangolin, Gerbil, and Traefik run on a small cloud VPS and act as the public entry point with whatever auth/routing controls I need. Traefik terminates HTTPS and Gerbil manages WireGuard tunnels. On the home server, Newt establishes an outbound tunnel back to the Pangolin endpoint (`pangolin.parkerhdavis.com`), so services like Jellyfin and Immich are reachable from the internet without exposing the home network or forwarding ports on the router.
+On the Droplet: Pangolin, Gerbil, and Traefik run on a small cloud VPS and act as the public entry point with whatever auth/routing controls I need. Traefik terminates HTTPS and Gerbil manages WireGuard tunnels. On the home server, Newt establishes an outbound tunnel back to the Pangolin endpoint, so services like Jellyfin and Immich are reachable from the internet without exposing the home network or forwarding ports on the router.
 
 On the Server: 
 
@@ -39,17 +39,14 @@ On the Server:
 The manual config to get set up is pretty minimal; Pangolin, Immich, and Jellyfin all have great UIs for handling the majority of the relevant config.
 
 ```sh
-# 1. Create config directories for your host
+# 1. Set your environment variables
+cp .env.example .env
+# Edit .env — set BASE_DOMAIN, ACME_EMAIL, and the secrets for your host
+
+# 2. Run setup (creates directories and generates config from templates)
 make setup droplet        # or: make setup phd-server
 
-# 2. Set secrets
-cp .env.example .env
-# Edit .env — droplet needs SERVER_SECRET, phd-server needs NEWT_ID/NEWT_SECRET + Immich DB creds
-
-# 3. Review Pangolin config (droplet only)
-#    pangolin/config/config.yml
-
-# 4. Start services
+# 3. Start services
 make up droplet           # or: make up phd-server
 ```
 

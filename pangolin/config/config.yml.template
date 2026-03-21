@@ -1,5 +1,5 @@
 app:
-  dashboard_url: "https://pangolin.parkerhdavis.com"
+  dashboard_url: "https://pangolin.${BASE_DOMAIN}"
   log_level: "info"
   save_logs: false
 
@@ -13,7 +13,7 @@ server:
   resource_session_request_param: "p_session_request"
   cors:
     origins:
-      - "https://pangolin.parkerhdavis.com"
+      - "https://pangolin.${BASE_DOMAIN}"
     methods:
       - "GET"
       - "POST"
@@ -24,8 +24,8 @@ server:
   trust_proxy: 1
 
 domains:
-  parkerhdavis:
-    base_domain: "parkerhdavis.com"
+  primary:
+    base_domain: "${BASE_DOMAIN}"
     cert_resolver: "letsencrypt"
     prefer_wildcard_cert: false
 
@@ -36,7 +36,7 @@ traefik:
   prefer_wildcard_cert: false
 
 gerbil:
-  base_endpoint: "pangolin.parkerhdavis.com"
+  base_endpoint: "pangolin.${BASE_DOMAIN}"
   start_port: 51820
   subnet_group: "10.0.0.0/8"
   block_size: 24

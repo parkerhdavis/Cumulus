@@ -6,9 +6,12 @@ CLAUDE.md
 .env
 
 # Pangolin auto-generated files
+pangolin/config/config.yml
 pangolin/config/db/
 pangolin/config/key
 pangolin/config/letsencrypt/
+pangolin/config/traefik/traefik_config.yml
+pangolin/config/traefik/dynamic_config.yml
 pangolin/config/traefik/logs/
 
 # OS

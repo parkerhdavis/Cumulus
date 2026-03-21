@@ -123,22 +123,29 @@ ps:
 
 setup:
 	$(call require_host,setup)
+	@if [ ! -f .env ]; then \
+		echo "Error: .env not found. Run 'cp .env.example .env' and fill in your values first."; \
+		exit 1; \
+	fi
 ifeq ($(HOST_NAME),droplet)
 	@echo "Creating required directories for droplet..."
 	mkdir -p pangolin/config/traefik/logs
 	mkdir -p pangolin/config/letsencrypt
-	@echo "Directory structure ready"
+	@echo "Generating config files from templates..."
+	@set -a && . ./.env && set +a && \
+		envsubst < pangolin/config/config.yml.template > pangolin/config/config.yml && \
+		envsubst < pangolin/config/traefik/traefik_config.yml.template > pangolin/config/traefik/traefik_config.yml && \
+		envsubst < pangolin/config/traefik/dynamic_config.yml.template > pangolin/config/traefik/dynamic_config.yml
+	@echo "Config files generated"
 	@echo ""
 	@echo "Next steps:"
-	@echo "  1. Copy .env.example to .env and set SERVER_SECRET"
-	@echo "  2. Review pangolin/config/config.yml"
-	@echo "  3. Run 'make up droplet' to start services"
+	@echo "  1. Review generated config in pangolin/config/"
+	@echo "  2. Run 'make up droplet' to start services"
 else ifeq ($(HOST_NAME),phd-server)
-	@echo "No directory setup needed for phd-server"
+	@echo "No additional setup needed for phd-server"
 	@echo ""
 	@echo "Next steps:"
-	@echo "  1. Copy .env.example to .env and set NEWT_ID and NEWT_SECRET"
-	@echo "  2. Run 'make up phd-server' to start services"
+	@echo "  1. Run 'make up phd-server' to start services"
 endif
 
 # -------------
