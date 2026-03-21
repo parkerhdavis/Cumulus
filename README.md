@@ -10,17 +10,17 @@ The stack is split across two hosts, each with its own compose file:
 
 | Service | Description |
 |---------|-------------|
-| **Pangolin** | Reverse proxy & tunnel management |
-| **Gerbil** | WireGuard tunnel agent for Pangolin |
-| **Traefik** | Edge router handling HTTPS termination and routing |
+| **[Pangolin](https://github.com/fosrl/pangolin)** | Reverse proxy & tunnel management |
+| **[Gerbil](https://github.com/fosrl/gerbil)** | WireGuard tunnel agent for Pangolin |
+| **[Traefik](https://github.com/traefik/traefik)** | Edge router handling HTTPS termination and routing |
 
 **phd-server** (home server) is where the actual applications run:
 
 | Service | Description |
 |---------|-------------|
-| **Newt** | Tunnel agent that connects back to Pangolin |
-| **Jellyfin** | Media server for movies, TV, music |
-| **Immich** | Self-hosted photo & video management |
+| **[Newt](https://github.com/fosrl/newt)** | Tunnel agent that connects back to Pangolin |
+| **[Jellyfin](https://github.com/jellyfin/jellyfin)** | Media server for movies, TV, music |
+| **[Immich](https://github.com/immich-app/immich)** | Self-hosted photo & video management |
 | **Immich ML** | Machine learning sidecar for face/object recognition |
 | **Immich Redis** | Caching layer for Immich (Valkey) |
 | **Immich Database** | PostgreSQL with vector extensions for Immich search |
