@@ -1,4 +1,4 @@
-.PHONY: help up down rebuild logs ps clean sync setup droplet phd-server
+.PHONY: help up down pull rebuild logs ps clean sync setup droplet phd-server
 
 # ==================================================================
 # HOST DETECTION
@@ -36,6 +36,7 @@ help:
 	@echo "Running:"
 	@echo "  up <host>            # Start services"
 	@echo "  down <host>          # Stop services"
+	@echo "  pull <host>          # Pull latest images for services"
 	@echo "  rebuild <host>       # Clean stop + rebuild images + start services"
 	@echo ""
 	@echo "Logging:"
@@ -80,6 +81,12 @@ down:
 	@echo "Stopping $(HOST_NAME) services..."
 	$(DOCKER_COMPOSE) down
 	@echo "Services stopped on $(HOST_NAME)"
+
+pull:
+	$(call require_host,pull)
+	@echo "Pulling latest images for $(HOST_NAME)..."
+	$(DOCKER_COMPOSE) pull
+	@echo "Images pulled for $(HOST_NAME)"
 
 rebuild: clean
 	$(call require_host,rebuild)
