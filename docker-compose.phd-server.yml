@@ -73,9 +73,33 @@ services:
       - ${IMMICH_DB_PATH}:/var/lib/postgresql/data
     shm_size: 128mb
 
+  # Open WebUI + Ollama — local LLM interface
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    restart: unless-stopped
+    volumes:
+      - ${OLLAMA_DATA_PATH}:/root/.ollama
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - OLLAMA_BASE_URLS=${OPEN_WEBUI_OLLAMA_URLS:-http://ollama:11434}
+    volumes:
+      - open-webui-data:/app/backend/data
+    depends_on:
+      - ollama
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
 volumes:
   jellyfin-config:
     external: true
   jellyfin-cache:
     external: true
+  open-webui-data:
   immich-model-cache:
