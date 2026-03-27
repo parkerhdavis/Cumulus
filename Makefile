@@ -16,6 +16,20 @@ endif
 
 DOCKER_COMPOSE := docker compose -f $(COMPOSE_FILE)
 
+# Resolve Spark mDNS hostname → IP and append to OPEN_WEBUI_OLLAMA_URLS
+# (Docker containers can't resolve .local hostnames natively)
+RESOLVE_SPARK = SPARK_HOST=$$(grep -s '^SPARK_HOSTNAME=' .env | cut -d= -f2-); \
+	if [ -n "$$SPARK_HOST" ]; then \
+		SPARK_IP=$$(getent hosts "$$SPARK_HOST" 2>/dev/null | awk '{print $$1}'); \
+		if [ -n "$$SPARK_IP" ]; then \
+			echo "Resolved $$SPARK_HOST → $$SPARK_IP"; \
+			BASE_URLS=$$(grep -s '^OPEN_WEBUI_OLLAMA_URLS=' .env | cut -d= -f2-); \
+			export OPEN_WEBUI_OLLAMA_URLS="$${BASE_URLS:-http://ollama:11434};http://$$SPARK_IP:11434"; \
+		else \
+			echo "Warning: Could not resolve $$SPARK_HOST — Spark models will be unavailable"; \
+		fi; \
+	fi
+
 # No-op targets so make doesn't complain about "No rule to make target"
 droplet phd-server:
 	@:
@@ -73,7 +87,11 @@ endef
 up:
 	$(call require_host,up)
 	@echo "Starting $(HOST_NAME) services..."
+ifeq ($(HOST_NAME),phd-server)
+	@$(RESOLVE_SPARK); $(DOCKER_COMPOSE) up -d
+else
 	$(DOCKER_COMPOSE) up -d
+endif
 	@echo "Services started on $(HOST_NAME)"
 
 down:
@@ -95,7 +113,11 @@ rebuild: clean
 		echo "Error: Docker daemon not running"; \
 		exit 1; \
 	fi
+ifeq ($(HOST_NAME),phd-server)
+	@$(RESOLVE_SPARK); $(DOCKER_COMPOSE) up -d --build --force-recreate
+else
 	$(DOCKER_COMPOSE) up -d --build --force-recreate
+endif
 	@echo "Services rebuilt and started on $(HOST_NAME)"
 
 # -------------
