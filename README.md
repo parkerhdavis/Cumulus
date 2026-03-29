@@ -50,6 +50,20 @@ make setup droplet        # or: make setup phd-server
 make up droplet           # or: make up phd-server
 ```
 
+### What gets configured where
+
+**`.env`** is the single source of truth for all settings — domains, secrets, paths, and credentials. Edit this first; everything else is derived from it.
+
+**`make setup <host>`** uses `envsubst` to generate the actual config files from templates:
+
+| Template | Generated file | Key variables |
+|----------|---------------|---------------|
+| `pangolin/config/config.yml.template` | `config.yml` | `BASE_DOMAIN` |
+| `pangolin/config/traefik/traefik_config.yml.template` | `traefik_config.yml` | `ACME_EMAIL` |
+| `pangolin/config/traefik/dynamic_config.yml.template` | `dynamic_config.yml` | `BASE_DOMAIN` |
+
+The generated files are gitignored, so you must run `make setup` on each host after cloning. Do **not** copy the `.template` files directly — the `${VAR}` placeholders won't be substituted at runtime.
+
 ## Commands
 
 All commands take a host argument (`droplet` or `phd-server`):
