@@ -7,6 +7,7 @@ import { graphRoute } from "./routes/graph.js";
 import { validateVault } from "./services/vault.js";
 import { parseAllNotes, buildFullResolveMap } from "./services/parser.js";
 import { buildSearchIndex } from "./services/search.js";
+import { buildGraph } from "./services/graph.js";
 
 const app = new Hono()
   .use(logger())
@@ -33,6 +34,7 @@ if (import.meta.main) {
   console.log(`Resolve map: ${Object.keys(resolveMap).length} entries`);
 
   buildSearchIndex(notes);
+  buildGraph(notes, resolveMap);
 
   console.timeEnd("Startup");
 }

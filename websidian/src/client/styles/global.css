@@ -472,3 +472,98 @@ code {
   color: var(--text-faint);
   font-size: 14px;
 }
+
+/* Graph view */
+.graph-view {
+  width: 100%;
+  height: calc(100vh - 48px);
+}
+
+.graph-loading,
+.graph-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-faint);
+}
+
+/* Sigma.js / react-sigma styles */
+div.react-sigma {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  background: var(--background-primary);
+}
+
+div.sigma-container {
+  height: 100%;
+  width: 100%;
+  background: var(--background-primary) !important;
+}
+
+/* Backlinks */
+.backlinks {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.backlinks-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.backlinks-header:hover {
+  color: var(--text-normal);
+}
+
+.backlinks-chevron {
+  font-size: 10px;
+  width: 12px;
+}
+
+.backlinks-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 8px;
+}
+
+.backlink-item {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.backlink-item:last-child {
+  border-bottom: none;
+}
+
+.backlink-source {
+  color: var(--text-accent);
+  font-weight: 500;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.backlink-source:hover {
+  text-decoration: underline;
+}
+
+.backlink-context {
+  display: block;
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

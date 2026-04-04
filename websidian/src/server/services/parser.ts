@@ -102,9 +102,17 @@ export function buildResolveMap(notes: ParsedNote[]): ResolveMap {
   const map: ResolveMap = {};
 
   for (const note of notes) {
+    // Index by filename (without .md extension)
     const name = basename(note.path, ".md").toLowerCase();
     if (!map[name]) map[name] = [];
     map[name].push(note.path);
+
+    // Index by full path (without .md extension) for path-style wikilinks
+    const fullPath = note.path.replace(/\.md$/, "").toLowerCase();
+    if (fullPath !== name) {
+      if (!map[fullPath]) map[fullPath] = [];
+      map[fullPath].push(note.path);
+    }
 
     // Index aliases
     const aliases = note.frontmatter.aliases;
