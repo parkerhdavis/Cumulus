@@ -98,6 +98,20 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
 
+  # Websidian — self-hosted Obsidian vault web viewer
+  websidian:
+    build: ./websidian
+    container_name: websidian
+    restart: unless-stopped
+    ports:
+      - "3200:3000"
+    volumes:
+      - ${VAULT_PATH}:/vault:ro
+    environment:
+      - VAULT_PATH=/vault
+      - HIDE_FOLDERS=.obsidian,.git,.trash,.stversions,.stfolder,.claude
+      - PORT=3000
+
 volumes:
   jellyfin-config:
     external: true
