@@ -318,6 +318,14 @@ code {
   margin: 0 auto;
 }
 
+.note-title {
+  font-size: 2.25em;
+  font-weight: 700;
+  color: var(--h1-color);
+  margin-bottom: 16px;
+  line-height: 1.2;
+}
+
 /* Rendered markdown content */
 .markdown-rendered {
   font-size: var(--font-size-normal);

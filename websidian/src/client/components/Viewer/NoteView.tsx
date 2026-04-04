@@ -35,9 +35,13 @@ export default function NoteView() {
 
   if (!note) return null;
 
+  // Derive title from filename (without .md extension)
+  const title = note.path.split("/").pop()?.replace(/\.md$/, "") ?? "";
+
   return (
     <article className="note-view">
       <Breadcrumb path={note.path} />
+      <h1 className="note-title">{title}</h1>
       <div className="note-content">
         <MarkdownRenderer
           content={note.content}
