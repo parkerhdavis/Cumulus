@@ -1,10 +1,11 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { serveStatic } from "hono/bun";
-import { filesRoute } from "./routes/files.js";
+import { filesRoute, setResolveMap } from "./routes/files.js";
 import { searchRoute } from "./routes/search.js";
 import { graphRoute } from "./routes/graph.js";
 import { validateVault } from "./services/vault.js";
+import { parseAllNotes, buildFullResolveMap } from "./services/parser.js";
 
 const app = new Hono()
   .use(logger())
@@ -20,9 +21,17 @@ const app = new Hono()
     return c.html(html);
   });
 
-// Validate vault on startup
+// Startup: validate vault and build indexes
 if (import.meta.main) {
+  console.time("Startup");
   await validateVault();
+
+  const notes = await parseAllNotes();
+  const resolveMap = await buildFullResolveMap(notes);
+  setResolveMap(resolveMap);
+  console.log(`Resolve map: ${Object.keys(resolveMap).length} entries`);
+
+  console.timeEnd("Startup");
 }
 
 export default {
