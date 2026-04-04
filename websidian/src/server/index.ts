@@ -4,6 +4,7 @@ import { serveStatic } from "hono/bun";
 import { filesRoute } from "./routes/files.js";
 import { searchRoute } from "./routes/search.js";
 import { graphRoute } from "./routes/graph.js";
+import { validateVault } from "./services/vault.js";
 
 const app = new Hono()
   .use(logger())
@@ -18,6 +19,11 @@ const app = new Hono()
     const html = await Bun.file("./build/index.html").text();
     return c.html(html);
   });
+
+// Validate vault on startup
+if (import.meta.main) {
+  await validateVault();
+}
 
 export default {
   port: Number(process.env.PORT ?? 3000),
