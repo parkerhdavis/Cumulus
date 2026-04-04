@@ -1,0 +1,41 @@
+{
+  "name": "websidian",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev:server": "bun --watch src/server/index.ts",
+    "dev:client": "bun ./src/client/index.html --port=3001",
+    "build": "bun run build.ts",
+    "preview": "bun run src/server/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.7.0",
+    "zod": "^3.24.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.0.0",
+    "@tanstack/react-query": "^5.0.0",
+    "markdown-it": "^14.0.0",
+    "markdown-it-wikilinks-plus": "^1.4.0",
+    "markdown-it-obsidian-images": "^1.0.1",
+    "markdown-it-obsidian-callouts": "^0.3.3",
+    "@hackmd/markdown-it-task-lists": "^2.1.4",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-mathjax3": "^5.2.0",
+    "gray-matter": "^4.0.0",
+    "minisearch": "^7.0.0",
+    "@react-sigma/core": "^5.0.6",
+    "sigma": "^3.0.2",
+    "graphology": "^0.26.0",
+    "graphology-layout-forceatlas2": "^0.10.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.11",
+    "@types/markdown-it": "^14.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.8.0"
+  }
+}
