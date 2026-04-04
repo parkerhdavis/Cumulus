@@ -1,9 +1,45 @@
 import { Hono } from "hono";
+import {
+  getTree,
+  getMarkdownContent,
+  getBinaryFile,
+  resolveVaultPath,
+  isMarkdown,
+} from "../services/vault.js";
 
 export const filesRoute = new Hono()
-  .get("/tree", (c) => {
-    return c.json({ name: "vault", type: "directory", children: [] });
+  .get("/tree", async (c) => {
+    const tree = await getTree();
+    return c.json(tree);
   })
-  .get("/*", (c) => {
-    return c.json({ path: "", content: "", frontmatter: {}, modified: "" });
+  .get("/*", async (c) => {
+    const relativePath = c.req.path.replace(/^\/api\/files\//, "");
+    const decoded = decodeURIComponent(relativePath);
+
+    if (!decoded) {
+      return c.json({ error: "No file path provided" }, 400);
+    }
+
+    try {
+      // Validate the path doesn't escape the vault
+      resolveVaultPath(decoded);
+
+      if (isMarkdown(decoded)) {
+        const content = await getMarkdownContent(decoded);
+        return c.json(content);
+      } else {
+        const { data, mimeType } = await getBinaryFile(decoded);
+        return new Response(data, {
+          headers: { "Content-Type": mimeType },
+        });
+      }
+    } catch (err: any) {
+      if (err.message === "Path traversal detected") {
+        return c.json({ error: "Invalid path" }, 403);
+      }
+      if (err.code === "ENOENT") {
+        return c.json({ error: "File not found" }, 404);
+      }
+      throw err;
+    }
   });

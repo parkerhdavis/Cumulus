@@ -102,3 +102,174 @@ code {
 .welcome p {
   font-size: 14px;
 }
+
+/* Sidebar header */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-toggle,
+.sidebar-open-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.sidebar-toggle:hover,
+.sidebar-open-btn:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.sidebar-open-btn {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  font-size: 18px;
+}
+
+.content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* File tree */
+.file-tree {
+  user-select: none;
+}
+
+.tree-node {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--text-normal);
+  text-decoration: none;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-node:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.tree-folder {
+  background: none;
+  border: none;
+  font: inherit;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.tree-chevron {
+  font-size: 10px;
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.tree-icon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.tree-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-file-active {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.tree-file-active:hover {
+  background-color: var(--interactive-accent-hover);
+}
+
+/* Note view */
+.note-view {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.note-content pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: var(--font-text);
+  font-size: var(--font-size-normal);
+  line-height: var(--line-height);
+}
+
+/* Breadcrumb */
+.breadcrumb {
+  font-size: var(--font-size-small);
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.breadcrumb-separator {
+  margin: 0 6px;
+  color: var(--text-faint);
+}
+
+.breadcrumb-current {
+  color: var(--text-normal);
+  font-weight: 500;
+}
+
+/* Loading */
+.note-loading {
+  max-width: 800px;
+  margin: 0 auto;
+  padding-top: 24px;
+}
+
+.loading-skeleton {
+  height: 16px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+  margin-bottom: 12px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.loading-skeleton-short {
+  width: 60%;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+/* Error */
+.note-error,
+.sidebar-error {
+  color: var(--text-muted);
+}
+
+.note-error {
+  text-align: center;
+  padding-top: 48px;
+}
+
+.note-error h2 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}

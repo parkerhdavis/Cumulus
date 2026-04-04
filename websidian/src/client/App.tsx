@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import AppShell from "./components/Layout/AppShell";
+import NoteView from "./components/Viewer/NoteView";
 
 function WelcomePage() {
   return (
@@ -15,7 +16,7 @@ export default function App() {
     <Routes>
       <Route element={<AppShell />}>
         <Route path="/" element={<WelcomePage />} />
-        <Route path="/note/*" element={<div>Note view (coming soon)</div>} />
+        <Route path="/note/*" element={<NoteView />} />
         <Route path="/graph" element={<div>Graph view (coming soon)</div>} />
       </Route>
     </Routes>
