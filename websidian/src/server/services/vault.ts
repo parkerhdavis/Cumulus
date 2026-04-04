@@ -20,7 +20,7 @@ export interface FileContent {
 
 const VAULT_PATH = resolve(process.env.VAULT_PATH ?? "./vault");
 const HIDE_FOLDERS = new Set(
-  (process.env.HIDE_FOLDERS ?? ".obsidian,.git,.trash,.stversions,.stfolder,.claude")
+  (process.env.HIDE_FOLDERS ?? ".obsidian,.git,.trash,.stversions,.stfolder,.claude,.venv")
     .split(",")
     .map((s) => s.trim()),
 );
@@ -76,14 +76,18 @@ async function buildTree(dirPath: string, relDir: string): Promise<TreeNode[]> {
         children,
       });
     } else {
-      const fileStat = await stat(fullPath);
-      nodes.push({
-        name: entry.name,
-        type: "file",
-        path: relPath,
-        modified: fileStat.mtime.toISOString(),
-        size: fileStat.size,
-      });
+      try {
+        const fileStat = await stat(fullPath);
+        nodes.push({
+          name: entry.name,
+          type: "file",
+          path: relPath,
+          modified: fileStat.mtime.toISOString(),
+          size: fileStat.size,
+        });
+      } catch {
+        // Skip broken symlinks or unreadable files
+      }
     }
   }
 

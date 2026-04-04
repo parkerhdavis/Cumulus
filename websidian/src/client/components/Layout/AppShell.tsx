@@ -1,12 +1,22 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Link, Outlet } from "react-router-dom";
-import FileTree from "../Sidebar/FileTree";
+import FileTree, { type SortMode } from "../Sidebar/FileTree";
+import SidebarToolbar from "../Sidebar/SidebarToolbar";
 import QuickSwitcher from "../Sidebar/QuickSwitcher";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>("name-asc");
+  const [autoReveal, setAutoReveal] = useState(false);
+  // expandGeneration: even = collapsed, odd = expanded. Incrementing toggles.
+  const [expandGeneration, setExpandGeneration] = useState(0);
+  const allExpanded = expandGeneration % 2 === 1;
+
+  const handleToggleExpandAll = useCallback(() => {
+    setExpandGeneration((g) => g + 1);
+  }, []);
 
   const shortcuts = useMemo(
     () => [
@@ -44,8 +54,20 @@ export default function AppShell() {
               Graph
             </Link>
           </div>
+          <SidebarToolbar
+            sortMode={sortMode}
+            onSortChange={setSortMode}
+            autoReveal={autoReveal}
+            onAutoRevealToggle={() => setAutoReveal((v) => !v)}
+            allExpanded={allExpanded}
+            onToggleExpandAll={handleToggleExpandAll}
+          />
           <nav className="sidebar-nav">
-            <FileTree />
+            <FileTree
+              sortMode={sortMode}
+              autoReveal={autoReveal}
+              expandGeneration={expandGeneration}
+            />
           </nav>
         </aside>
       )}

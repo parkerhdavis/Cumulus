@@ -104,13 +104,13 @@ services:
     container_name: websidian
     restart: unless-stopped
     ports:
-      - "3200:3000"
+      - "${WEBSIDIAN_HOST_PORT:-3200}:${WEBSIDIAN_PORT:-3000}"
     volumes:
       - ${VAULT_PATH}:/vault:ro
     environment:
       - VAULT_PATH=/vault
-      - HIDE_FOLDERS=.obsidian,.git,.trash,.stversions,.stfolder,.claude
-      - PORT=3000
+      - HIDE_FOLDERS=${WEBSIDIAN_HIDE_FOLDERS:-.obsidian,.git,.trash,.stversions,.stfolder,.claude}
+      - PORT=${WEBSIDIAN_PORT:-3000}
 
 volumes:
   jellyfin-config:
