@@ -6,11 +6,21 @@ import {
   resolveVaultPath,
   isMarkdown,
 } from "../services/vault.js";
+import type { ResolveMap } from "../services/parser.js";
+
+let resolveMap: ResolveMap = {};
+
+export function setResolveMap(map: ResolveMap) {
+  resolveMap = map;
+}
 
 export const filesRoute = new Hono()
   .get("/tree", async (c) => {
     const tree = await getTree();
     return c.json(tree);
+  })
+  .get("/resolve-map", (c) => {
+    return c.json(resolveMap);
   })
   .get("/*", async (c) => {
     const relativePath = c.req.path.replace(/^\/api\/files\//, "");

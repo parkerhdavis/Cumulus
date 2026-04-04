@@ -1,5 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { useNoteContent } from "../../hooks/useNoteContent";
+import { useResolveMap } from "../../hooks/useResolveMap";
+import MarkdownRenderer from "./MarkdownRenderer";
 import Breadcrumb from "./Breadcrumb";
 
 export default function NoteView() {
@@ -9,6 +11,7 @@ export default function NoteView() {
   );
 
   const { data: note, isLoading, error } = useNoteContent(notePath);
+  const { data: resolveMap } = useResolveMap();
 
   if (isLoading) {
     return (
@@ -34,9 +37,11 @@ export default function NoteView() {
   return (
     <article className="note-view">
       <Breadcrumb path={note.path} />
-      {/* Markdown rendering will replace this in Phase 2 */}
       <div className="note-content">
-        <pre>{note.content}</pre>
+        <MarkdownRenderer
+          content={note.content}
+          resolveMap={resolveMap ?? {}}
+        />
       </div>
     </article>
   );
