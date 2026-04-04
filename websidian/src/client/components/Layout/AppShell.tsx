@@ -1,9 +1,22 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 import FileTree from "../Sidebar/FileTree";
+import QuickSwitcher from "../Sidebar/QuickSwitcher";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
 export default function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [quickSwitcherOpen, setQuickSwitcherOpen] = useState(false);
+
+  const shortcuts = useMemo(
+    () => [
+      { key: "k", meta: true, handler: () => setQuickSwitcherOpen(true) },
+      { key: "o", meta: true, handler: () => setQuickSwitcherOpen(true) },
+      { key: "\\", meta: true, handler: () => setSidebarOpen((v) => !v) },
+    ],
+    [],
+  );
+  useKeyboardShortcuts(shortcuts);
 
   return (
     <div className="app-shell">
@@ -38,6 +51,10 @@ export default function AppShell() {
           <Outlet />
         </main>
       </div>
+      <QuickSwitcher
+        isOpen={quickSwitcherOpen}
+        onClose={() => setQuickSwitcherOpen(false)}
+      />
     </div>
   );
 }
