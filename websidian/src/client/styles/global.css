@@ -66,6 +66,32 @@ code {
   letter-spacing: 0.05em;
 }
 
+.sidebar-actions {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.sidebar-action-btn {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--interactive-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+}
+
+.sidebar-action-btn:hover {
+  background: var(--interactive-hover);
+  color: var(--text-normal);
+}
+
 .sidebar-nav {
   flex: 1;
   overflow-y: auto;
@@ -566,4 +592,53 @@ div.sigma-container {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Unresolved wikilinks */
+.markdown-rendered a.wikilink-unresolved {
+  color: var(--text-muted);
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* Note embed placeholder */
+.embed-note {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  font-size: 13px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .content {
+    padding: 16px;
+  }
+
+  .note-view {
+    max-width: 100%;
+  }
+
+  .quick-switcher {
+    width: calc(100vw - 32px);
+    margin: 0 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 12px;
+  }
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 import FileTree from "../Sidebar/FileTree";
 import QuickSwitcher from "../Sidebar/QuickSwitcher";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
@@ -31,6 +31,18 @@ export default function AppShell() {
             >
               ✕
             </button>
+          </div>
+          <div className="sidebar-actions">
+            <button
+              className="sidebar-action-btn"
+              onClick={() => setQuickSwitcherOpen(true)}
+              title="Search notes (Cmd+K)"
+            >
+              Search...
+            </button>
+            <Link to="/graph" className="sidebar-action-btn">
+              Graph
+            </Link>
           </div>
           <nav className="sidebar-nav">
             <FileTree />
