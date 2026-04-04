@@ -3,6 +3,7 @@ import { useNoteContent } from "../../hooks/useNoteContent";
 import { useResolveMap } from "../../hooks/useResolveMap";
 import MarkdownRenderer from "./MarkdownRenderer";
 import Breadcrumb from "./Breadcrumb";
+import Backlinks from "./Backlinks";
 
 export default function NoteView() {
   const location = useLocation();
@@ -43,6 +44,7 @@ export default function NoteView() {
           resolveMap={resolveMap ?? {}}
         />
       </div>
+      <Backlinks path={note.path} />
     </article>
   );
 }
