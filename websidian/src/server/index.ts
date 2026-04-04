@@ -6,6 +6,7 @@ import { searchRoute } from "./routes/search.js";
 import { graphRoute } from "./routes/graph.js";
 import { validateVault } from "./services/vault.js";
 import { parseAllNotes, buildFullResolveMap } from "./services/parser.js";
+import { buildSearchIndex } from "./services/search.js";
 
 const app = new Hono()
   .use(logger())
@@ -30,6 +31,8 @@ if (import.meta.main) {
   const resolveMap = await buildFullResolveMap(notes);
   setResolveMap(resolveMap);
   console.log(`Resolve map: ${Object.keys(resolveMap).length} entries`);
+
+  buildSearchIndex(notes);
 
   console.timeEnd("Startup");
 }
