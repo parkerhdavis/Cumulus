@@ -15,6 +15,10 @@ pangolin/config/traefik/traefik_config.yml
 pangolin/config/traefik/dynamic_config.yml
 pangolin/config/traefik/logs/
 
+# Websidian
+websidian/node_modules/
+websidian/build/
+
 # OS
 .DS_Store
 .directory
