@@ -24,6 +24,9 @@ The stack is split across two hosts, each with its own compose file:
 | **Immich ML** | Machine learning sidecar for face/object recognition |
 | **Immich Redis** | Caching layer for Immich (Valkey) |
 | **Immich Database** | PostgreSQL with vector extensions for Immich search |
+| **[Open WebUI](https://github.com/open-webui/open-webui)** | LLM chat interface with model management |
+| **[Ollama](https://github.com/ollama/ollama)** | Local LLM inference engine |
+| **[Websidian](websidian/)** | Custom web-based viewer for Obsidian vaults |
 
 ### How it all fits together
 
@@ -32,7 +35,11 @@ On the Droplet: Pangolin, Gerbil, and Traefik run on a small cloud VPS and act a
 On the Server: 
 
 - Immich runs as a small cluster of containers: the main server, a machine-learning worker, Redis for caching, and a Postgres database with pgvector for similarity search. Its library and database are stored on a separate drive for capacity reasons. 
-- Jellyfin similarly mounts its media from a larger capacity drive. Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-server`).
+- Jellyfin similarly mounts its media from a larger capacity drive.
+- Open WebUI provides a browser-based chat interface backed by Ollama for local LLM inference. It can optionally connect to additional endpoints (e.g. a DGX Spark) — the Makefile resolves mDNS hostnames to IPs at startup so Docker containers can reach them.
+- Websidian is a custom-built, read-only web viewer for an Obsidian vault. It mounts the vault as a read-only volume and serves a React SPA with full markdown rendering, wikilink resolution, backlinks, full-text search, and a knowledge graph. Built with Bun, Hono, and React.
+
+Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-server`).
 
 ## Quick Start
 
