@@ -1,5 +1,7 @@
 @import "./obsidian-theme.css";
 @import "./callouts.css";
+@import "./canvas.css";
+@import "./base.css";
 
 *,
 *::before,

@@ -113,10 +113,8 @@ export default function FileTreeNode({
     );
   }
 
-  // Strip .md extension for display
-  const displayName = node.name.endsWith(".md")
-    ? node.name.slice(0, -3)
-    : node.name;
+  // Strip known extensions for display
+  const displayName = node.name.replace(/\.(md|base|canvas)$/, "");
 
   return (
     <Link
