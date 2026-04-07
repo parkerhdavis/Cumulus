@@ -18,6 +18,7 @@
 import { parse as parseYaml } from "yaml";
 import { basename, dirname, extname } from "node:path";
 import type { ParsedNote } from "./parser.js";
+import { evaluateFormula, buildFormulaContext } from "./formula-evaluator.js";
 
 // ── Types ──
 
@@ -122,7 +123,7 @@ export function evaluateBase(rawYaml: string, basePath: string, notes: ParsedNot
 
 			// Apply sorting
 			if (view.sort?.length) {
-				filtered = applySort(filtered, view.sort);
+				filtered = applySort(filtered, view.sort, formulas);
 			}
 
 			// Apply limit
@@ -131,7 +132,10 @@ export function evaluateBase(rawYaml: string, basePath: string, notes: ParsedNot
 			}
 
 			// Build rows with resolved property values
-			const allPropertyKeys = collectPropertyKeys(filtered, view.order, formulas);
+			const extraKeys: string[] = [];
+			if (view.groupBy?.property) extraKeys.push(view.groupBy.property);
+			if (view.sort) for (const s of view.sort) extraKeys.push(s.property);
+			const allPropertyKeys = collectPropertyKeys(filtered, view.order, formulas, extraKeys);
 			const rows: RowData[] = filtered.map((note) => ({
 				path: note.path,
 				fileName: basename(note.path, extname(note.path)),
@@ -379,11 +383,11 @@ function compareValues(noteVal: unknown, op: string, rawVal: string): boolean {
 
 // ── Sorting ──
 
-function applySort(notes: ParsedNote[], sorts: SortConfig[]): ParsedNote[] {
+function applySort(notes: ParsedNote[], sorts: SortConfig[], formulas?: Record<string, string>): ParsedNote[] {
 	return [...notes].sort((a, b) => {
 		for (const sort of sorts) {
-			const aVal = getPropertyValue(a, sort.property);
-			const bVal = getPropertyValue(b, sort.property);
+			const aVal = getPropertyValue(a, sort.property, formulas);
+			const bVal = getPropertyValue(b, sort.property, formulas);
 			const cmp = compareForSort(aVal, bVal);
 			if (cmp !== 0) return sort.direction === "DESC" ? -cmp : cmp;
 		}
@@ -424,7 +428,7 @@ function applyGrouping(rows: RowData[], groupBy: { property: string; direction?:
 
 // ── Property resolution ──
 
-function getPropertyValue(note: ParsedNote, key: string): unknown {
+function getPropertyValue(note: ParsedNote, key: string, formulas?: Record<string, string>): unknown {
 	// File properties
 	if (key === "file.name") return basename(note.path, extname(note.path));
 	if (key === "file.path") return note.path;
@@ -433,24 +437,46 @@ function getPropertyValue(note: ParsedNote, key: string): unknown {
 	if (key === "file.tags") return note.tags;
 	if (key === "file.links") return note.wikilinks;
 
+	// Formula properties
+	if (key.startsWith("formula.") && formulas) {
+		const formulaName = key.slice(8); // strip "formula."
+		const expr = formulas[formulaName];
+		if (expr) {
+			return evalFormulaForNote(note, expr, formulas);
+		}
+		return null;
+	}
+
 	// Frontmatter property (with or without note. prefix)
 	const propName = key.startsWith("note.") ? key.slice(5) : key;
 	return note.frontmatter[propName];
 }
 
+/** Evaluate a single formula expression for a given note, with cross-formula resolution. */
+function evalFormulaForNote(note: ParsedNote, expr: string, formulas: Record<string, string>, depth = 0): unknown {
+	if (depth > 10) return null; // guard against circular refs
+	const ctx = buildFormulaContext(note);
+	return evaluateFormula(expr, ctx, (refName) => {
+		const refExpr = formulas[refName];
+		if (!refExpr) return null;
+		return evalFormulaForNote(note, refExpr, formulas, depth + 1);
+	});
+}
+
 function resolveProperties(note: ParsedNote, keys: string[], formulas: Record<string, string>): Record<string, unknown> {
 	const values: Record<string, unknown> = {};
 	for (const key of keys) {
-		if (key in formulas) {
-			values[key] = getPropertyValue(note, key) ?? null;
-		} else {
-			values[key] = getPropertyValue(note, key);
-		}
+		values[key] = getPropertyValue(note, key, formulas);
 	}
 	return values;
 }
 
-function collectPropertyKeys(notes: ParsedNote[], order: string[] | undefined, formulas: Record<string, string>): string[] {
+function collectPropertyKeys(
+	notes: ParsedNote[],
+	order: string[] | undefined,
+	formulas: Record<string, string>,
+	extraKeys?: string[],
+): string[] {
 	const keys = new Set<string>();
 
 	// Always include file.name first
@@ -461,9 +487,14 @@ function collectPropertyKeys(notes: ParsedNote[], order: string[] | undefined, f
 		for (const k of order) keys.add(k);
 	}
 
-	// Add formula keys
+	// Add formula keys (with formula. prefix for proper resolution)
 	for (const k of Object.keys(formulas)) {
-		keys.add(k);
+		keys.add(`formula.${k}`);
+	}
+
+	// Add any extra keys (e.g. groupBy property, sort properties)
+	if (extraKeys) {
+		for (const k of extraKeys) keys.add(k);
 	}
 
 	// Collect all frontmatter keys from matching notes
