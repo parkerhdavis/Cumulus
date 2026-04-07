@@ -1,0 +1,175 @@
+/* Canvas view */
+.note-view-canvas {
+	max-width: none;
+}
+
+.canvas-view {
+	position: relative;
+	width: 100%;
+	height: calc(100vh - 200px);
+	min-height: 400px;
+	overflow: hidden;
+	background: var(--background-primary-alt);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	cursor: grab;
+}
+
+.canvas-view.canvas-dragging {
+	cursor: grabbing;
+}
+
+.canvas-transform {
+	position: absolute;
+	top: 0;
+	left: 0;
+	transform-origin: 0 0;
+	will-change: transform;
+}
+
+/* Edge layer */
+.canvas-edges {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 1px;
+	height: 1px;
+	overflow: visible;
+	pointer-events: none;
+}
+
+.canvas-edge-label {
+	font-size: 12px;
+	font-family: var(--font-text);
+	fill: var(--text-muted);
+}
+
+/* Nodes */
+.canvas-node {
+	position: absolute;
+	border-radius: 6px;
+	overflow: hidden;
+}
+
+.canvas-node-text,
+.canvas-node-file,
+.canvas-node-link {
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.canvas-node-group {
+	border: 2px dashed var(--background-modifier-border);
+	background: rgba(255, 255, 255, 0.02);
+	pointer-events: none;
+	border-radius: 8px;
+}
+
+.canvas-node-group .canvas-group-label {
+	pointer-events: none;
+	position: absolute;
+	top: -24px;
+	left: 8px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+
+/* Node content */
+.canvas-node-content {
+	padding: 12px;
+	height: 100%;
+	overflow: auto;
+}
+
+.canvas-text-content {
+	font-size: 14px;
+	line-height: 1.5;
+	color: var(--text-normal);
+}
+
+.canvas-text-content p {
+	margin: 0 0 8px;
+}
+
+.canvas-text-content p:last-child {
+	margin-bottom: 0;
+}
+
+.canvas-text-content h1 { font-size: 1.5em; margin: 0 0 8px; }
+.canvas-text-content h2 { font-size: 1.25em; margin: 0 0 6px; }
+.canvas-text-content h3 { font-size: 1.1em; margin: 0 0 4px; }
+
+.canvas-text-content a {
+	color: var(--text-accent);
+}
+
+.canvas-text-content code {
+	font-family: var(--font-monospace);
+	font-size: 0.9em;
+	background: var(--code-background);
+	padding: 1px 4px;
+	border-radius: 3px;
+}
+
+.canvas-text-content pre {
+	background: var(--code-background);
+	padding: 8px 12px;
+	border-radius: 4px;
+	overflow-x: auto;
+	margin: 8px 0;
+}
+
+.canvas-text-content ul,
+.canvas-text-content ol {
+	padding-left: 20px;
+	margin: 4px 0;
+}
+
+/* File nodes */
+.canvas-file-header {
+	display: flex;
+	align-items: center;
+	height: 100%;
+}
+
+.canvas-file-header a {
+	color: var(--text-accent);
+	font-weight: 500;
+	font-size: 14px;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.canvas-file-header a:hover {
+	text-decoration: underline;
+}
+
+.canvas-file-image {
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.canvas-file-image img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-radius: 5px;
+}
+
+/* Link nodes */
+.canvas-link-header {
+	display: flex;
+	align-items: center;
+	height: 100%;
+}
+
+.canvas-link-header a {
+	color: var(--text-accent);
+	font-size: 13px;
+	word-break: break-all;
+}

@@ -27,6 +27,7 @@
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.0.0",
     "sigma": "^3.0.2",
+    "yaml": "^2.8.3",
     "zod": "^3.24.0"
   },
   "devDependencies": {

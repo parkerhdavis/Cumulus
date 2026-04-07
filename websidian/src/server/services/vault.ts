@@ -40,6 +40,9 @@ const MIME_TYPES: Record<string, string> = {
   ".webm": "video/webm",
 };
 
+/** File extensions that are structured data (not markdown, not binary). */
+const STRUCTURED_EXTENSIONS = new Set([".base", ".canvas"]);
+
 let cachedTree: TreeNode | null = null;
 
 /**
@@ -203,4 +206,26 @@ export function getVaultPath(): string {
  */
 export function isMarkdown(relativePath: string): boolean {
   return relativePath.endsWith(".md");
+}
+
+/**
+ * Check whether a vault-relative path points to a structured data file (.base, .canvas).
+ */
+export function isStructured(relativePath: string): boolean {
+  const ext = extname(relativePath).toLowerCase();
+  return STRUCTURED_EXTENSIONS.has(ext);
+}
+
+/**
+ * Read a structured file (.base or .canvas) and return its raw text content.
+ */
+export async function getStructuredContent(relativePath: string): Promise<{ path: string; raw: string; modified: string }> {
+  const fullPath = resolveVaultPath(relativePath);
+  const fileStat = await stat(fullPath);
+  const raw = await Bun.file(fullPath).text();
+  return {
+    path: relativePath,
+    raw,
+    modified: fileStat.mtime.toISOString(),
+  };
 }

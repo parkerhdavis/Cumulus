@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { serveStatic } from "hono/bun";
-import { filesRoute, setResolveMap } from "./routes/files.js";
+import { filesRoute, setResolveMap, setParsedNotes } from "./routes/files.js";
 import { searchRoute } from "./routes/search.js";
 import { graphRoute } from "./routes/graph.js";
 import { validateVault } from "./services/vault.js";
@@ -31,6 +31,7 @@ if (import.meta.main) {
   const notes = await parseAllNotes();
   const resolveMap = await buildFullResolveMap(notes);
   setResolveMap(resolveMap);
+  setParsedNotes(notes);
   console.log(`Resolve map: ${Object.keys(resolveMap).length} entries`);
 
   buildSearchIndex(notes);
