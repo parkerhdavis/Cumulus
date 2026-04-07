@@ -2,14 +2,17 @@
  * Evaluates Obsidian .base files against parsed vault notes.
  *
  * Supports:
- * - Filter expressions: file.inFolder(), file.hasTag(), file.hasLink(),
- *   file.hasProperty(), file.ext comparisons, note.property comparisons
+ * - Filter expressions with file.* and note.* subjects
+ * - Bracket notation: note["property-name"]
+ * - Negation: !expression
+ * - Method calls: .contains(), .isEmpty(), .startsWith(), .endsWith(),
+ *   .inFolder(), .hasTag(), .hasLink(), .hasProperty()
+ * - Comparisons: ==, !=, >, <, >=, <=
  * - Composite filters: and, or, not
  * - Views: table, cards, list
  * - Sorting by property (ASC/DESC)
  * - Grouping by property
  * - Property display names
- * - Summaries (count only for now)
  */
 
 import { parse as parseYaml } from "yaml";
@@ -36,7 +39,7 @@ type FilterEntry = string | FilterGroup;
 type FilterExpr = string;
 
 interface ViewConfig {
-	type?: "table" | "cards" | "list";
+	type?: string;
 	name?: string;
 	filters?: FilterGroup | FilterExpr;
 	groupBy?: { property: string; direction?: "ASC" | "DESC" };
@@ -102,55 +105,62 @@ export function evaluateBase(rawYaml: string, basePath: string, notes: ParsedNot
 	const propertyConfig = baseFile.properties ?? {};
 	const formulas = baseFile.formulas ?? {};
 
-	const evaluatedViews: EvaluatedView[] = views.map((view) => {
-		// Apply global filters first, then view-specific filters
-		let filtered = notes;
-		if (globalFilter) {
-			filtered = applyFilter(filtered, globalFilter);
-		}
-		if (view.filters) {
-			filtered = applyFilter(filtered, view.filters);
-		}
+	const evaluatedViews: EvaluatedView[] = views
+		.filter((view) => {
+			const t = view.type ?? "table";
+			return t === "table" || t === "cards" || t === "list";
+		})
+		.map((view) => {
+			// Apply global filters first, then view-specific filters
+			let filtered = notes;
+			if (globalFilter) {
+				filtered = applyFilter(filtered, globalFilter);
+			}
+			if (view.filters) {
+				filtered = applyFilter(filtered, view.filters);
+			}
 
-		// Apply sorting
-		if (view.sort?.length) {
-			filtered = applySort(filtered, view.sort);
-		}
+			// Apply sorting
+			if (view.sort?.length) {
+				filtered = applySort(filtered, view.sort);
+			}
 
-		// Apply limit
-		if (view.limit && view.limit > 0) {
-			filtered = filtered.slice(0, view.limit);
-		}
+			// Apply limit
+			if (view.limit && view.limit > 0) {
+				filtered = filtered.slice(0, view.limit);
+			}
 
-		// Build rows with resolved property values
-		const allPropertyKeys = collectPropertyKeys(filtered, view.order, formulas);
-		const rows: RowData[] = filtered.map((note) => ({
-			path: note.path,
-			fileName: basename(note.path, extname(note.path)),
-			values: resolveProperties(note, allPropertyKeys, formulas),
-		}));
+			// Build rows with resolved property values
+			const allPropertyKeys = collectPropertyKeys(filtered, view.order, formulas);
+			const rows: RowData[] = filtered.map((note) => ({
+				path: note.path,
+				fileName: basename(note.path, extname(note.path)),
+				values: resolveProperties(note, allPropertyKeys, formulas),
+			}));
 
-		// Apply grouping
-		const groups = view.groupBy
-			? applyGrouping(rows, view.groupBy)
-			: [{ label: null, rows }];
+			// Apply grouping
+			const groups = view.groupBy
+				? applyGrouping(rows, view.groupBy)
+				: [{ label: null, rows }];
 
-		// Build column definitions
-		const orderedKeys = view.order ?? allPropertyKeys;
-		const columns: ColumnDef[] = orderedKeys.map((key) => ({
-			key,
-			displayName: propertyConfig[key]?.displayName ?? formatPropertyName(key),
-			width: view.columnSize?.[key],
-		}));
+			// Build column definitions
+			const orderedKeys = view.order ?? allPropertyKeys;
+			const columns: ColumnDef[] = orderedKeys.map((key) => ({
+				key,
+				displayName: propertyConfig[key]?.displayName ?? formatPropertyName(key),
+				width: view.columnSize?.[key],
+			}));
 
-		return {
-			name: view.name ?? "View",
-			type: view.type ?? "table",
-			columns,
-			groups,
-			totalCount: rows.length,
-		};
-	});
+			const viewType = (view.type ?? "table") as "table" | "cards" | "list";
+
+			return {
+				name: view.name ?? "View",
+				type: viewType,
+				columns,
+				groups,
+				totalCount: rows.length,
+			};
+		});
 
 	return { views: evaluatedViews };
 }
@@ -183,94 +193,155 @@ function applyFilter(notes: ParsedNote[], filter: FilterGroup | FilterExpr): Par
 	return notes;
 }
 
+/**
+ * Parse and evaluate a single filter expression string.
+ *
+ * Supported patterns:
+ *   file.inFolder("path")
+ *   file.hasTag("tag")
+ *   file.hasLink("link")
+ *   file.hasProperty("prop")
+ *   file.path.contains("str")
+ *   file.name.startsWith("str")
+ *   note["prop-name"].isEmpty()
+ *   note["prop-name"] == "value"
+ *   property == "value"
+ *   !<any of the above>
+ */
 function evaluateFilterExpr(note: ParsedNote, expr: string): boolean {
-	const trimmed = expr.trim();
+	let trimmed = expr.trim();
 
-	// file.inFolder("path")
-	const inFolderMatch = trimmed.match(/^file\.inFolder\(["'](.+?)["']\)$/);
-	if (inFolderMatch) {
-		const folder = inFolderMatch[1];
-		const noteDir = dirname(note.path);
-		return noteDir === folder || noteDir.startsWith(folder + "/");
+	// Handle negation prefix: !expression
+	let negated = false;
+	if (trimmed.startsWith("!")) {
+		negated = true;
+		trimmed = trimmed.substring(1).trim();
 	}
 
-	// file.hasTag("tag")
-	const hasTagMatch = trimmed.match(/^file\.hasTag\(["'](.+?)["']\)$/);
-	if (hasTagMatch) {
-		const tag = hasTagMatch[1].replace(/^#/, "");
-		return note.tags.some((t) => t.replace(/^#/, "") === tag);
-	}
+	const result = evaluateExprInner(note, trimmed);
+	return negated ? !result : result;
+}
 
-	// file.hasLink("link")
-	const hasLinkMatch = trimmed.match(/^file\.hasLink\(["'](.+?)["']\)$/);
-	if (hasLinkMatch) {
-		const link = hasLinkMatch[1].toLowerCase();
-		return note.wikilinks.some((l) => l.toLowerCase() === link);
-	}
+function evaluateExprInner(note: ParsedNote, expr: string): boolean {
+	// ── file-level method calls: file.inFolder(), file.hasTag(), etc. ──
 
-	// file.hasProperty("prop")
-	const hasPropMatch = trimmed.match(/^file\.hasProperty\(["'](.+?)["']\)$/);
-	if (hasPropMatch) {
-		return hasPropMatch[1] in note.frontmatter;
-	}
-
-	// file.ext == "md" / file.ext != "md"
-	const extMatch = trimmed.match(/^file\.ext\s*(==|!=)\s*["'](.+?)["']$/);
-	if (extMatch) {
-		const noteExt = extname(note.path).replace(/^\./, "");
-		return extMatch[1] === "==" ? noteExt === extMatch[2] : noteExt !== extMatch[2];
-	}
-
-	// file.name comparisons
-	const fileNameMatch = trimmed.match(/^file\.name\s*(==|!=|contains|startsWith|endsWith)\s*["'](.+?)["']$/);
-	if (fileNameMatch) {
-		const fileName = basename(note.path, extname(note.path));
-		const [, op, val] = fileNameMatch;
-		switch (op) {
-			case "==": return fileName === val;
-			case "!=": return fileName !== val;
-			case "contains": return fileName.includes(val);
-			case "startsWith": return fileName.startsWith(val);
-			case "endsWith": return fileName.endsWith(val);
+	const fileMethodMatch = expr.match(/^file\.(inFolder|hasTag|hasLink|hasProperty)\(["'](.+?)["']\)$/);
+	if (fileMethodMatch) {
+		const [, method, arg] = fileMethodMatch;
+		switch (method) {
+			case "inFolder": {
+				const noteDir = dirname(note.path);
+				return noteDir === arg || noteDir.startsWith(arg + "/");
+			}
+			case "hasTag": {
+				const tag = arg.replace(/^#/, "");
+				return note.tags.some((t) => t.replace(/^#/, "") === tag);
+			}
+			case "hasLink":
+				return note.wikilinks.some((l) => l.toLowerCase() === arg.toLowerCase());
+			case "hasProperty":
+				return arg in note.frontmatter;
 		}
 	}
 
-	// file.folder comparisons
-	const fileFolderMatch = trimmed.match(/^file\.folder\s*(==|!=)\s*["'](.+?)["']$/);
-	if (fileFolderMatch) {
-		const noteDir = dirname(note.path);
-		return fileFolderMatch[1] === "==" ? noteDir === fileFolderMatch[2] : noteDir !== fileFolderMatch[2];
+	// ── file property method calls: file.path.contains(), file.name.startsWith(), etc. ──
+
+	const filePropMethodMatch = expr.match(/^file\.(path|name|folder|ext)\.(contains|startsWith|endsWith|isEmpty)\((?:["'](.+?)["'])?\)$/);
+	if (filePropMethodMatch) {
+		const [, prop, method, arg] = filePropMethodMatch;
+		const val = getFileProperty(note, prop);
+		return evalStringMethod(val, method, arg);
 	}
 
-	// note.property comparisons: note.status == "done", note.count > 5, etc.
-	const notePropMatch = trimmed.match(/^(?:note\.)?(\w[\w-]*)\s*(==|!=|>|<|>=|<=)\s*["']?(.+?)["']?$/);
-	if (notePropMatch) {
-		const [, prop, op, rawVal] = notePropMatch;
-		// Skip file.* properties that weren't already matched
+	// ── file property comparisons: file.path == "...", file.ext != "md", etc. ──
+
+	const filePropCmpMatch = expr.match(/^file\.(path|name|folder|ext)\s*(==|!=|>|<|>=|<=)\s*["'](.+?)["']$/);
+	if (filePropCmpMatch) {
+		const [, prop, op, val] = filePropCmpMatch;
+		const fileVal = getFileProperty(note, prop);
+		return compareValues(fileVal, op, val);
+	}
+
+	// ── note["bracket-notation"] method calls: note["prop"].isEmpty(), note["prop"].contains("x") ──
+
+	const bracketMethodMatch = expr.match(/^(?:note)?\["(.+?)"\]\.(contains|startsWith|endsWith|isEmpty)\((?:["'](.+?)["'])?\)$/);
+	if (bracketMethodMatch) {
+		const [, prop, method, arg] = bracketMethodMatch;
+		const val = note.frontmatter[prop];
+		return evalPropertyMethod(val, method, arg);
+	}
+
+	// ── note["bracket-notation"] comparisons: note["prop"] == "value" ──
+
+	const bracketCmpMatch = expr.match(/^(?:note)?\["(.+?)"\]\s*(==|!=|>|<|>=|<=)\s*["'](.+?)["']$/);
+	if (bracketCmpMatch) {
+		const [, prop, op, rawVal] = bracketCmpMatch;
+		const noteVal = note.frontmatter[prop];
+		return compareValues(noteVal, op, rawVal);
+	}
+
+	// ── dot-notation method calls: note.prop.contains("x"), prop.isEmpty() ──
+
+	const dotMethodMatch = expr.match(/^(?:note\.)?(\w[\w-]*)\.(contains|startsWith|endsWith|isEmpty)\((?:["'](.+?)["'])?\)$/);
+	if (dotMethodMatch) {
+		const [, prop, method, arg] = dotMethodMatch;
+		const val = note.frontmatter[prop];
+		return evalPropertyMethod(val, method, arg);
+	}
+
+	// ── dot-notation comparisons: note.status == "done", Qty > 5, etc. ──
+
+	const dotCmpMatch = expr.match(/^(?:note\.)?(\w[\w-]*)\s*(==|!=|>|<|>=|<=)\s*["']?(.+?)["']?$/);
+	if (dotCmpMatch) {
+		const [, prop, op, rawVal] = dotCmpMatch;
+		// Guard: don't match file.* here (already handled above)
 		if (prop === "file") return true;
 		const noteVal = note.frontmatter[prop];
 		return compareValues(noteVal, op, rawVal);
 	}
 
-	// note.property.contains("value")
-	const propContainsMatch = trimmed.match(/^(?:note\.)?(\w[\w-]*)\.contains\(["'](.+?)["']\)$/);
-	if (propContainsMatch) {
-		const [, prop, val] = propContainsMatch;
-		const noteVal = note.frontmatter[prop];
-		if (Array.isArray(noteVal)) return noteVal.some((v) => String(v) === val);
-		if (typeof noteVal === "string") return noteVal.includes(val);
-		return false;
-	}
-
-	// note.property.isEmpty()
-	const isEmptyMatch = trimmed.match(/^(?:note\.)?(\w[\w-]*)\.isEmpty\(\)$/);
-	if (isEmptyMatch) {
-		const val = note.frontmatter[isEmptyMatch[1]];
-		return val === undefined || val === null || val === "" || (Array.isArray(val) && val.length === 0);
-	}
-
 	// Fallback: unrecognized expression passes through
 	return true;
+}
+
+// ── Property helpers ──
+
+function getFileProperty(note: ParsedNote, prop: string): string {
+	switch (prop) {
+		case "path": return note.path;
+		case "name": return basename(note.path, extname(note.path));
+		case "folder": return dirname(note.path);
+		case "ext": return extname(note.path).replace(/^\./, "");
+		default: return "";
+	}
+}
+
+function evalStringMethod(val: string, method: string, arg?: string): boolean {
+	switch (method) {
+		case "contains": return arg ? val.toLowerCase().includes(arg.toLowerCase()) : false;
+		case "startsWith": return arg ? val.startsWith(arg) : false;
+		case "endsWith": return arg ? val.endsWith(arg) : false;
+		case "isEmpty": return !val || val.length === 0;
+		default: return false;
+	}
+}
+
+function evalPropertyMethod(val: unknown, method: string, arg?: string): boolean {
+	switch (method) {
+		case "isEmpty":
+			return val === undefined || val === null || val === "" || (Array.isArray(val) && val.length === 0);
+		case "contains":
+			if (!arg) return false;
+			if (Array.isArray(val)) return val.some((v) => String(v) === arg);
+			if (typeof val === "string") return val.includes(arg);
+			return false;
+		case "startsWith":
+			return typeof val === "string" && arg ? val.startsWith(arg) : false;
+		case "endsWith":
+			return typeof val === "string" && arg ? val.endsWith(arg) : false;
+		default:
+			return false;
+	}
 }
 
 function compareValues(noteVal: unknown, op: string, rawVal: string): boolean {
@@ -294,14 +365,13 @@ function compareValues(noteVal: unknown, op: string, rawVal: string): boolean {
 
 	// String comparison
 	const strNote = String(noteVal);
-	const strRaw = rawVal;
 	switch (op) {
-		case "==": return strNote === strRaw;
-		case "!=": return strNote !== strRaw;
-		case ">": return strNote > strRaw;
-		case "<": return strNote < strRaw;
-		case ">=": return strNote >= strRaw;
-		case "<=": return strNote <= strRaw;
+		case "==": return strNote === rawVal;
+		case "!=": return strNote !== rawVal;
+		case ">": return strNote > rawVal;
+		case "<": return strNote < rawVal;
+		case ">=": return strNote >= rawVal;
+		case "<=": return strNote <= rawVal;
 	}
 
 	return false;
@@ -372,8 +442,7 @@ function resolveProperties(note: ParsedNote, keys: string[], formulas: Record<st
 	const values: Record<string, unknown> = {};
 	for (const key of keys) {
 		if (key in formulas) {
-			// Formula evaluation is limited — just show the formula expression for now
-			values[key] = getPropertyValue(note, key) ?? `=${formulas[key]}`;
+			values[key] = getPropertyValue(note, key) ?? null;
 		} else {
 			values[key] = getPropertyValue(note, key);
 		}
