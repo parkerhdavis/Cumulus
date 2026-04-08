@@ -113,8 +113,9 @@ export function embedPlugin(md: MarkdownIt, resolveMap: ResolveMap) {
       token.children = [];
     } else {
       // Note embed — render as a placeholder for potential future processing
+      const escaped = target.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const token = state.push("html_inline", "", 0);
-      token.content = `<div class="embed-note" data-embed="${target}">[Embedded: ${target}]</div>`;
+      token.content = `<div class="embed-note" data-embed="${escaped}">[Embedded: ${escaped}]</div>`;
     }
 
     state.pos = closeIdx + 2;

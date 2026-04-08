@@ -1,4 +1,5 @@
 import MarkdownIt from "markdown-it";
+import DOMPurify from "dompurify";
 import obsidianCallouts from "markdown-it-obsidian-callouts";
 // @ts-ignore
 import taskLists from "@hackmd/markdown-it-task-lists";
@@ -36,4 +37,15 @@ export function createMarkdownRenderer(resolveMap: ResolveMap): MarkdownIt {
   md.use(mathjax3);
 
   return md;
+}
+
+/**
+ * Render markdown to sanitized HTML.
+ */
+export function renderMarkdown(md: MarkdownIt, content: string): string {
+  const raw = md.render(content);
+  return DOMPurify.sanitize(raw, {
+    ADD_TAGS: ["mjx-container", "mjx-assistive-mml"],
+    ADD_ATTR: ["class", "data-embed", "data-callout", "data-callout-fold"],
+  });
 }
