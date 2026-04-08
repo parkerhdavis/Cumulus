@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { createMarkdownRenderer, type ResolveMap } from "../../lib/markdown";
+import { createMarkdownRenderer, renderMarkdown, type ResolveMap } from "../../lib/markdown";
 
 interface MarkdownRendererProps {
   content: string;
@@ -16,7 +16,7 @@ export default function MarkdownRenderer({
 
   const html = useMemo(() => {
     const md = createMarkdownRenderer(resolveMap);
-    return md.render(content);
+    return renderMarkdown(md, content);
   }, [content, resolveMap]);
 
   // Intercept clicks on internal links for client-side navigation

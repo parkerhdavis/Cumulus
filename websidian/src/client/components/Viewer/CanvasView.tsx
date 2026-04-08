@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { createMarkdownRenderer, type ResolveMap } from "../../lib/markdown";
+import { createMarkdownRenderer, renderMarkdown, type ResolveMap } from "../../lib/markdown";
 import { API_BASE } from "../../lib/api";
 
 // ── JSON Canvas types ──
@@ -201,7 +201,7 @@ export default function CanvasView({ data, resolveMap }: CanvasViewProps) {
 				return (
 					<div
 						className="canvas-node-content canvas-text-content"
-						dangerouslySetInnerHTML={{ __html: mdRenderer.render(node.text ?? "") }}
+						dangerouslySetInnerHTML={{ __html: renderMarkdown(mdRenderer, node.text ?? "") }}
 					/>
 				);
 

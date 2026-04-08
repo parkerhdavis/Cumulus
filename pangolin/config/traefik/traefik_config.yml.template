@@ -1,6 +1,6 @@
 api:
-  insecure: true
-  dashboard: true
+  insecure: false
+  dashboard: false
 
 providers:
   http:

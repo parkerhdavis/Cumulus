@@ -11,6 +11,16 @@ import { buildGraph } from "./services/graph.js";
 
 const app = new Hono()
   .use(logger())
+  .use(async (c, next) => {
+    await next();
+    c.header("X-Content-Type-Options", "nosniff");
+    c.header("X-Frame-Options", "DENY");
+    c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+    c.header(
+      "Content-Security-Policy",
+      "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:",
+    );
+  })
   .get("/health", (c) => c.json({ status: "ok" }))
   .route("/api/files", filesRoute)
   .route("/api/search", searchRoute)
