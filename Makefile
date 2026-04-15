@@ -1,4 +1,5 @@
-.PHONY: help up down pull rebuild logs ps clean sync setup droplet phd-server
+.PHONY: help up down pull rebuild logs ps clean sync setup droplet phd-server \
+       p4 p4-info p4-users p4-depots p4-logs p4-shell
 
 # ==================================================================
 # HOST DETECTION
@@ -63,6 +64,14 @@ help:
 	@echo ""
 	@echo "Cleanup:"
 	@echo "  clean <host>         # Stop services and remove ephemeral Docker resources"
+	@echo ""
+	@echo "Perforce (phd-server):"
+	@echo "  p4 <cmd>             # Run any p4 command in the container (e.g. make p4 cmd='verify -q //...')"
+	@echo "  p4-info              # Show server info"
+	@echo "  p4-users             # List users"
+	@echo "  p4-depots            # List depots"
+	@echo "  p4-logs              # Tail the Perforce server log"
+	@echo "  p4-shell             # Open a shell in the Perforce container"
 	@echo ""
 	@echo "Repository:"
 	@echo "  sync                 # Pull latest changes from git (force, discards local changes)"
@@ -179,6 +188,30 @@ clean:
 	@echo "Cleaning up $(HOST_NAME) Docker resources..."
 	$(DOCKER_COMPOSE) down --remove-orphans
 	@echo "Cleanup complete on $(HOST_NAME)"
+
+# ==================================================================
+# PERFORCE COMMANDS (phd-server only, no host arg needed)
+# ==================================================================
+
+P4 := docker exec perforce p4 -p 127.0.0.1:1666
+
+p4:
+	$(P4) $(cmd)
+
+p4-info:
+	$(P4) info
+
+p4-users:
+	$(P4) users
+
+p4-depots:
+	$(P4) depots
+
+p4-logs:
+	docker exec perforce tail -f /data/log
+
+p4-shell:
+	docker exec -it perforce bash
 
 # ==================================================================
 # GLOBAL COMMANDS (no host needed)

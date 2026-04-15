@@ -19,12 +19,9 @@ pangolin/config/traefik/logs/
 websidian/node_modules/
 websidian/build/
 
-# Ark VCS
-ark/ark
-ark/ark-cli
-.ark/
-.ark_config
-.ark_ignore
+# Perforce binaries
+perforce/p4d
+perforce/p4
 
 # OS
 .DS_Store

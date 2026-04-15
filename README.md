@@ -26,7 +26,7 @@ The stack is split across two hosts, each with its own compose file:
 | **Immich Database** | PostgreSQL with vector extensions for Immich search |
 | **[Open WebUI](https://github.com/open-webui/open-webui)** | LLM chat interface with model management |
 | **[Ollama](https://github.com/ollama/ollama)** | Local LLM inference engine |
-| **[Ark VCS](https://ark-vcs.com)** | Centralized version control server for game development |
+| **[Perforce Helix Core](https://www.perforce.com/products/helix-core)** | Version control server |
 | **[Websidian](websidian/)** | Custom web-based viewer for Obsidian vaults |
 
 ### How it all fits together
@@ -38,7 +38,7 @@ On the Server:
 - Immich runs as a small cluster of containers: the main server, a machine-learning worker, Redis for caching, and a Postgres database with pgvector for similarity search. Its library and database are stored on a separate drive for capacity reasons. 
 - Jellyfin similarly mounts its media from a larger capacity drive.
 - Open WebUI provides a browser-based chat interface backed by Ollama for local LLM inference. It can optionally connect to additional endpoints (e.g. a DGX Spark) — the Makefile resolves mDNS hostnames to IPs at startup so Docker containers can reach them. It also supports [Ollama Cloud](https://ollama.com) as an OpenAI-compatible connection — set `OLLAMA_CLOUD_API_KEY` in `.env` to enable it.
-- Ark VCS is a centralized version control system built for game development. It runs as a single binary server with no external dependencies, storing all data in a bind-mounted directory on `/mnt/vault-3/Ark`. It uses its own binary protocol over TCP with SSL (not HTTP), so it's exposed through Pangolin via raw TCP passthrough on port 9000.
+- Perforce Helix Core runs as a single-binary server (`p4d`), storing all depot data in a bind-mounted directory on `/mnt/vault-3/Perforce`. It uses its own binary protocol over TCP on port 1666, exposed through Pangolin via raw TCP passthrough.
 - Websidian is a custom-built, read-only web viewer for an Obsidian vault. It mounts the vault as a read-only volume and serves a React SPA with full markdown rendering, wikilink resolution, backlinks, full-text search, and a knowledge graph. Built with Bun, Hono, and React.
 
 Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-server`).
@@ -88,4 +88,15 @@ make ps <host>              Show running containers
 make setup <host>           Create required directories
 make clean <host>           Stop services and remove Docker resources
 make sync                   Force-pull latest from git
+```
+
+### Perforce commands (phd-server only)
+
+```
+make p4 cmd='<command>'     Run any p4 command in the container
+make p4-info                Show server info
+make p4-users               List users
+make p4-depots              List depots
+make p4-logs                Tail the Perforce server log
+make p4-shell               Open a shell in the Perforce container
 ```

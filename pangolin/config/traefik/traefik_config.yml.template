@@ -35,8 +35,6 @@ certificatesResolvers:
 entryPoints:
   tcp-1666:
     address: ":1666/tcp"
-  tcp-9000:
-    address: ":9000/tcp"
   web:
     address: ":80"
   websecure:
