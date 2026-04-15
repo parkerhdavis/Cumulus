@@ -102,6 +102,19 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
 
+  # Ark VCS — centralized version control server
+  ark-vcs:
+    build: ./ark
+    container_name: ark-vcs
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - /mnt/vault-3/Ark:/data/ark-server
+    # Uncomment when upgrading the Ark binary to a newer data version
+    # (back up the volume first — upgrades are irreversible):
+    # command: ["-path", "/data/ark-server", "-port", "9000", "-allow_dv_upgrade", "true"]
+
   # Websidian — self-hosted Obsidian vault web viewer
   websidian:
     build: ./websidian

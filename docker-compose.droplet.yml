@@ -35,6 +35,7 @@ services:
       - 443:443
       - 80:80
       - 1666:1666/tcp #p4
+      - 9000:9000/tcp #ark
 
   traefik:
     image: docker.io/traefik:v3.6
