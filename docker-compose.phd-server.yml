@@ -21,6 +21,11 @@ services:
       - /dev/dri/renderD128:/dev/dri/renderD128
     group_add:
       - "992"  # render group GID on phd-server; verify with: getent group render
+    environment:
+      # Point the Vulkan loader at the RADV ICD bundled with jellyfin-ffmpeg
+      # so HDR tone-mapping can use Vulkan compute on AMD (the image only
+      # ships Intel OpenCL ICDs by default).
+      - VK_ICD_FILENAMES=/usr/lib/jellyfin-ffmpeg/share/vulkan/icd.d/radeon_icd.x86_64.json
     volumes:
       - jellyfin-config:/config
       - jellyfin-cache:/cache
