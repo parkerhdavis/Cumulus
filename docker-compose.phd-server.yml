@@ -217,11 +217,12 @@ services:
         echo "zulip@localhost:$$(cat $$MEMCACHED_PASSWORD_FILE)" >> "$$MEMCACHED_SASL_PWDB"
         exec memcached -S
     secrets:
-      # Long-form with mode 0444 — memcached:alpine runs as the unprivileged
-      # `memcache` user, and Compose's default secret mode (0400 root:root) is
-      # unreadable to it, so the SASL DB ends up written with empty passwords.
-      - source: zulip__memcached_password
-        mode: 0444
+      # memcached:alpine runs as the unprivileged `memcache` user. For file-based
+      # secrets, Compose preserves the host file's permissions in the container
+      # mount, so `make setup phd-server` chmods the three sidecar secrets 0644
+      # to make them readable to the sidecar users (the other two, postgres and
+      # secret_key, are only read by root-running entrypoints and stay 0600).
+      - zulip__memcached_password
     environment:
       SASL_CONF_PATH: /home/memcache/memcached.conf
       MEMCACHED_SASL_PWDB: /home/memcache/memcached-sasl-db
@@ -240,10 +241,9 @@ services:
         echo 'default_pass = $$(RABBITMQ_DEFAULT_PASS)' >> /etc/rabbitmq/rabbitmq.conf
         exec docker-entrypoint.sh rabbitmq-server
     secrets:
-      # Long-form with mode 0444 — see the comment on zulip-memcached's secret;
-      # rabbitmq:4.2 likewise runs its entrypoint as the `rabbitmq` user.
-      - source: zulip__rabbitmq_password
-        mode: 0444
+      # rabbitmq:4.2 runs as the `rabbitmq` user — see comment on
+      # zulip-memcached's secret block for the chmod-on-host rationale.
+      - zulip__rabbitmq_password
     environment:
       RABBITMQ_DEFAULT_USER: zulip
       RABBITMQ_PASSWORD_FILE: /run/secrets/zulip__rabbitmq_password
@@ -259,10 +259,9 @@ services:
       - -euc
       - '/usr/local/bin/docker-entrypoint.sh --requirepass "$$(cat $$REDIS_PASSWORD_FILE)"'
     secrets:
-      # Long-form with mode 0444 — see the comment on zulip-memcached's secret;
-      # redis:alpine likewise runs its entrypoint as the `redis` user.
-      - source: zulip__redis_password
-        mode: 0444
+      # redis:alpine runs as the `redis` user — see comment on
+      # zulip-memcached's secret block for the chmod-on-host rationale.
+      - zulip__redis_password
     environment:
       REDIS_PASSWORD_FILE: /run/secrets/zulip__redis_password
     volumes:
