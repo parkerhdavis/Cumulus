@@ -135,6 +135,129 @@ services:
       - HIDE_FOLDERS=${WEBSIDIAN_HIDE_FOLDERS:-.obsidian,.git,.trash,.stversions,.stfolder,.claude}
       - PORT=${WEBSIDIAN_PORT:-3000}
 
+  # Zulip — team chat
+  # Services adapted from the upstream docker-zulip packaging
+  # (https://github.com/zulip/docker-zulip). Dependent services are prefixed
+  # `zulip-` to match the Cumulus convention (cf. immich-*); the SETTING_*
+  # overrides on the zulip service point at those renamed hostnames.
+  # Secrets are mounted as files from ./zulip/secrets/ (gitignored); run
+  # `make setup phd-server` to generate the random ones.
+  zulip:
+    image: ghcr.io/zulip/zulip-server:${ZULIP_IMAGE_TAG:-12.0-1}
+    container_name: zulip
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8082:80"
+    secrets:
+      - zulip__postgres_password
+      - zulip__memcached_password
+      - zulip__rabbitmq_password
+      - zulip__redis_password
+      - zulip__secret_key
+    environment:
+      SETTING_REMOTE_POSTGRES_HOST: zulip-database
+      SETTING_MEMCACHED_LOCATION: zulip-memcached:11211
+      SETTING_RABBITMQ_HOST: zulip-rabbitmq
+      SETTING_REDIS_HOST: zulip-redis
+      SETTING_EXTERNAL_HOST: zulip.${BASE_DOMAIN}
+      SETTING_ZULIP_ADMINISTRATOR: ${ZULIP_ADMINISTRATOR}
+      # TLS terminated upstream by Traefik/Pangolin; trust the proxy's
+      # X-Forwarded-* headers (otherwise rate-limiting + login flows misbehave).
+      DISABLE_HTTPS: "True"
+      LOADBALANCER_IPS: ${ZULIP_LOADBALANCER_IPS:-172.16.0.0/12}
+      # SMTP via Resend. The other five Zulip secrets (postgres, memcached,
+      # rabbitmq, redis, secret_key) are upstream's auto-generated noise and
+      # stay file-mounted under zulip/secrets/. The SMTP password is the one
+      # secret you actually edit — it lives in .env with the rest of Cumulus's
+      # credentials, and the upstream entrypoint accepts SECRETS_* env vars
+      # for any zulip-secrets.conf key.
+      SETTING_EMAIL_HOST: ${ZULIP_SMTP_HOST:-smtp.resend.com}
+      SETTING_EMAIL_HOST_USER: ${ZULIP_SMTP_USER:-resend}
+      SETTING_EMAIL_PORT: ${ZULIP_SMTP_PORT:-587}
+      SETTING_EMAIL_USE_TLS: "True"
+      SECRETS_email_password: ${ZULIP_SMTP_PASSWORD}
+      # Multi-threaded queue workers use noticeably less RAM than the
+      # multi-process default — fine for a small instance.
+      CONFIG_application_server__queue_workers_multiprocess: "false"
+    volumes:
+      - zulip-data:/data
+    ulimits:
+      nofile:
+        soft: 1000000
+        hard: 1048576
+    depends_on:
+      - zulip-database
+      - zulip-memcached
+      - zulip-rabbitmq
+      - zulip-redis
+
+  zulip-database:
+    image: zulip/zulip-postgresql:14
+    container_name: zulip_database
+    restart: unless-stopped
+    secrets:
+      - zulip__postgres_password
+    environment:
+      POSTGRES_DB: zulip
+      POSTGRES_USER: zulip
+      POSTGRES_PASSWORD_FILE: /run/secrets/zulip__postgres_password
+    volumes:
+      - zulip-postgresql-14:/var/lib/postgresql/data
+
+  zulip-memcached:
+    image: memcached:alpine
+    container_name: zulip_memcached
+    restart: unless-stopped
+    command:
+      - sh
+      - -euc
+      - |
+        echo 'mech_list: plain' > "$$SASL_CONF_PATH"
+        echo "zulip@$$HOSTNAME:$$(cat $$MEMCACHED_PASSWORD_FILE)" > "$$MEMCACHED_SASL_PWDB"
+        echo "zulip@localhost:$$(cat $$MEMCACHED_PASSWORD_FILE)" >> "$$MEMCACHED_SASL_PWDB"
+        exec memcached -S
+    secrets:
+      - zulip__memcached_password
+    environment:
+      SASL_CONF_PATH: /home/memcache/memcached.conf
+      MEMCACHED_SASL_PWDB: /home/memcache/memcached-sasl-db
+      MEMCACHED_PASSWORD_FILE: /run/secrets/zulip__memcached_password
+
+  zulip-rabbitmq:
+    image: rabbitmq:4.2
+    container_name: zulip_rabbitmq
+    restart: unless-stopped
+    command:
+      - sh
+      - -euc
+      - |
+        export RABBITMQ_DEFAULT_PASS="$$(cat $$RABBITMQ_PASSWORD_FILE)"
+        echo 'default_user = $$(RABBITMQ_DEFAULT_USER)' >> /etc/rabbitmq/rabbitmq.conf
+        echo 'default_pass = $$(RABBITMQ_DEFAULT_PASS)' >> /etc/rabbitmq/rabbitmq.conf
+        exec docker-entrypoint.sh rabbitmq-server
+    secrets:
+      - zulip__rabbitmq_password
+    environment:
+      RABBITMQ_DEFAULT_USER: zulip
+      RABBITMQ_PASSWORD_FILE: /run/secrets/zulip__rabbitmq_password
+    volumes:
+      - zulip-rabbitmq:/var/lib/rabbitmq
+
+  zulip-redis:
+    image: redis:alpine
+    container_name: zulip_redis
+    restart: unless-stopped
+    command:
+      - sh
+      - -euc
+      - '/usr/local/bin/docker-entrypoint.sh --requirepass "$$(cat $$REDIS_PASSWORD_FILE)"'
+    secrets:
+      - zulip__redis_password
+    environment:
+      REDIS_PASSWORD_FILE: /run/secrets/zulip__redis_password
+    volumes:
+      - zulip-redis-data:/data
+
 volumes:
   jellyfin-config:
     external: true
@@ -142,3 +265,19 @@ volumes:
     external: true
   open-webui-data:
   immich-model-cache:
+  zulip-data:
+  zulip-postgresql-14:
+  zulip-rabbitmq:
+  zulip-redis-data:
+
+secrets:
+  zulip__postgres_password:
+    file: ./zulip/secrets/postgres_password
+  zulip__memcached_password:
+    file: ./zulip/secrets/memcached_password
+  zulip__rabbitmq_password:
+    file: ./zulip/secrets/rabbitmq_password
+  zulip__redis_password:
+    file: ./zulip/secrets/redis_password
+  zulip__secret_key:
+    file: ./zulip/secrets/secret_key

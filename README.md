@@ -28,6 +28,7 @@ The stack is split across two hosts, each with its own compose file:
 | **[Ollama](https://github.com/ollama/ollama)** | Local LLM inference engine |
 | **[Perforce Helix Core](https://www.perforce.com/products/helix-core)** | Version control server |
 | **[Websidian](websidian/)** | Custom web-based viewer for Obsidian vaults |
+| **[Zulip](https://github.com/zulip/docker-zulip)** | Team chat (server + Postgres / RabbitMQ / Redis / Memcached sidecars) |
 
 ### How it all fits together
 
@@ -40,6 +41,7 @@ On the Server:
 - Open WebUI provides a browser-based chat interface backed by Ollama for local LLM inference. It can optionally connect to additional endpoints (e.g. a DGX Spark) — the Makefile resolves mDNS hostnames to IPs at startup so Docker containers can reach them. It also supports [Ollama Cloud](https://ollama.com) as an OpenAI-compatible connection — set `OLLAMA_CLOUD_API_KEY` in `.env` to enable it.
 - Perforce Helix Core runs as a single-binary server (`p4d`), storing all depot data in a bind-mounted directory on `/mnt/vault-3/Perforce`. It uses its own binary protocol over TCP on port 1666, exposed through Pangolin via raw TCP passthrough.
 - Websidian is a custom-built, read-only web viewer for an Obsidian vault. It mounts the vault as a read-only volume and serves a React SPA with full markdown rendering, wikilink resolution, backlinks, full-text search, and a knowledge graph. Built with Bun, Hono, and React.
+- Zulip is deployed from the [upstream docker-zulip packaging](https://github.com/zulip/docker-zulip) (pinned via `ZULIP_IMAGE_TAG`). It runs the app server with `DISABLE_HTTPS=True` behind Traefik/Pangolin and ships with its own Postgres/RabbitMQ/Redis/Memcached sidecars (prefixed `zulip-*` to match the Cumulus convention). The five auto-generated infrastructure secrets (postgres, memcached, rabbitmq, redis, Django secret key) live as Compose-mounted files in `zulip/secrets/` — `make setup phd-server` generates them and you never touch them again. The SMTP password lives in `.env` as `ZULIP_SMTP_PASSWORD` like every other Cumulus credential, and is passed in as a `SECRETS_email_password` env var that the upstream entrypoint reads into `zulip-secrets.conf`. Until Resend issues the key, leave it empty — Zulip starts fine and just warns that SMTP is unconfigured; recreate the Zulip container after filling it in.
 
 Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-server`).
 
@@ -100,3 +102,15 @@ make p4-depots              List depots
 make p4-logs                Tail the Perforce server log
 make p4-shell               Open a shell in the Perforce container
 ```
+
+### Zulip commands (phd-server only)
+
+```
+make zulip cmd='<args>'     Run a manage.py command in the Zulip container
+make zulip-create-org       Generate a one-time realm creation link
+make zulip-shell            Open a shell in the Zulip container
+make zulip-backup           Postgres dump + tar of /data into ./backups/zulip/
+make zulip-gen-secret       Print a strong random secret (for manual rotation)
+```
+
+Upgrade discipline: read the release notes, bump `ZULIP_IMAGE_TAG` in `.env`, then `make zulip-backup && make pull phd-server && make up phd-server`. Upgrade **one major version at a time**; skipping versions breaks migrations. Postgres major upgrades are a separate, deliberate operation (see [upstream docs](https://zulip.readthedocs.io/projects/docker/)).
