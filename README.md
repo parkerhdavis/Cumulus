@@ -108,6 +108,7 @@ make p4-shell               Open a shell in the Perforce container
 ```
 make zulip cmd='<args>'     Run a manage.py command in the Zulip container
 make zulip-create-org       Generate a one-time realm creation link
+make zulip-register-push    Register with the Mobile Push Notification Service (one-time, interactive)
 make zulip-shell            Open a shell in the Zulip container
 make zulip-backup           Postgres dump + tar of /data into ./backups/zulip/
 make zulip-gen-secret       Print a strong random secret (for manual rotation)
