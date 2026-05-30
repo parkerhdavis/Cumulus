@@ -231,10 +231,8 @@ else ifeq ($(HOST_NAME),phd-server)
 	  fi; \
 	done
 	@echo ""
-	@echo "Next steps:"
-	@echo "  1. Run 'make up phd-server' to start services"
-	@echo "  2. When Resend issues your API key, set ZULIP_SMTP_PASSWORD in .env"
-	@echo "     and recreate the container: docker compose -f docker-compose.phd-server.yml up -d zulip"
+	@echo "Next step: Run 'make up phd-server' to start services"
+	@echo ""
 endif
 
 # -------------
