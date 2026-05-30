@@ -182,33 +182,53 @@ ifeq ($(HOST_NAME),droplet)
 	@echo "  1. Review generated config in pangolin/config/"
 	@echo "  2. Run 'make up droplet' to start services"
 else ifeq ($(HOST_NAME),phd-server)
-	@echo "Creating Zulip secrets and backup directory..."
+	@echo "Setting up Zulip secrets and backup directory..."
 	mkdir -p zulip/secrets backups/zulip
-	@chmod 755 zulip/secrets
-	@# postgres_password and secret_key are only read inside the Zulip and
-	@# Postgres containers' root-running entrypoints, so they stay 0600.
-	@# memcached/rabbitmq/redis sidecars run their entrypoints as unprivileged
-	@# users and read the secret file directly — Compose preserves the host
-	@# file's permissions in the container mount, so those three get 0444.
-	@for name in postgres_password secret_key; do \
-		f="zulip/secrets/$$name"; \
-		if [ ! -s "$$f" ]; then \
-			openssl rand -hex 32 | tr -d '\n' > "$$f"; \
-			echo "  generated $$f"; \
-		else \
-			echo "  kept     $$f (existing)"; \
-		fi; \
-		chmod 600 "$$f"; \
-	done
-	@for name in memcached_password rabbitmq_password redis_password; do \
-		f="zulip/secrets/$$name"; \
-		if [ ! -s "$$f" ]; then \
-			openssl rand -hex 32 | tr -d '\n' > "$$f"; \
-			echo "  generated $$f (world-readable for sidecar UID)"; \
-		else \
-			echo "  kept     $$f (existing, world-readable for sidecar UID)"; \
-		fi; \
-		chmod 644 "$$f"; \
+	@chmod 755 zulip/secrets 2>/dev/null || true
+	@# Per-file logic for the five auto-generated infra secrets:
+	@#   1. Host file already has content -> keep it.
+	@#   2. Else if the cumulus_zulip-data volume holds a matching value in
+	@#      zulip-secrets.conf -> restore from there. Preserves compatibility
+	@#      with persisted Postgres / RabbitMQ / Redis / Memcached state that
+	@#      was initialized with those passwords. Without this, regenerating
+	@#      after losing the host files leaves the DB unable to authenticate.
+	@#   3. Else -> generate a random new value.
+	@# Modes: postgres + secret_key -> 0600 (read by root entrypoints only);
+	@# memcached/rabbitmq/redis -> 0644 (read by unprivileged sidecar UIDs).
+	@HAVE_VOLUME=0; \
+	if docker volume inspect cumulus_zulip-data >/dev/null 2>&1 && \
+	   docker run --rm -v cumulus_zulip-data:/data:ro alpine test -s /data/zulip-secrets.conf >/dev/null 2>&1; then \
+	  HAVE_VOLUME=1; \
+	  echo "  detected cumulus_zulip-data volume — will restore any missing secrets from it"; \
+	fi; \
+	MISSING=""; \
+	for name in postgres_password memcached_password rabbitmq_password redis_password secret_key; do \
+	  if [ -s "zulip/secrets/$$name" ]; then \
+	    echo "  kept      zulip/secrets/$$name"; \
+	  else \
+	    MISSING="$$MISSING $$name"; \
+	  fi; \
+	done; \
+	if [ -n "$$MISSING" ] && [ "$$HAVE_VOLUME" = "1" ]; then \
+	  docker run --rm \
+	    -v cumulus_zulip-data:/data:ro \
+	    -v "$$PWD/zulip/secrets:/host-secrets" \
+	    -e MISSING="$$MISSING" \
+	    alpine sh -c 'for key in $$MISSING; do \
+	      val=$$(sed -n "s/^$$key *= *//p" /data/zulip-secrets.conf); \
+	      if [ -n "$$val" ]; then \
+	        printf "%s" "$$val" > "/host-secrets/$$key"; \
+	        case "$$key" in postgres_password|secret_key) chmod 600 "/host-secrets/$$key" ;; *) chmod 644 "/host-secrets/$$key" ;; esac; \
+	        echo "  restored  zulip/secrets/$$key (from cumulus_zulip-data volume)"; \
+	      fi; \
+	    done'; \
+	fi; \
+	for name in $$MISSING; do \
+	  if [ ! -s "zulip/secrets/$$name" ]; then \
+	    openssl rand -hex 32 | tr -d '\n' > "zulip/secrets/$$name"; \
+	    case "$$name" in postgres_password|secret_key) chmod 600 "zulip/secrets/$$name" 2>/dev/null || true ;; *) chmod 644 "zulip/secrets/$$name" 2>/dev/null || true ;; esac; \
+	    echo "  generated zulip/secrets/$$name"; \
+	  fi; \
 	done
 	@echo ""
 	@echo "Next steps:"
