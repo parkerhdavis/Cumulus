@@ -24,6 +24,10 @@ websidian/build/
 perforce/p4d
 perforce/p4
 
+# Zulip secrets and local backups
+zulip/secrets/
+backups/
+
 # OS
 .DS_Store
 .directory
