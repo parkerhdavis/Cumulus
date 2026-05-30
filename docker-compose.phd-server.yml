@@ -176,6 +176,14 @@ services:
       SETTING_EMAIL_PORT: ${ZULIP_SMTP_PORT:-587}
       SETTING_EMAIL_USE_TLS: "True"
       SECRETS_email_password: ${ZULIP_SMTP_PASSWORD}
+      # Mobile push notifications via Zulip's Mobile Push Notification Service.
+      # Enabling the setting only routes pushes through the bouncer; the server
+      # still has to be registered via `make zulip-register-push` (one-time,
+      # interactive — accepts TOS, sends admin email + server metadata).
+      # Submit_usage_statistics opted out — basic metadata still flows per
+      # Zulip's docs, but the richer dataset is suppressed.
+      SETTING_ZULIP_SERVICE_PUSH_NOTIFICATIONS: "True"
+      SETTING_ZULIP_SERVICE_SUBMIT_USAGE_STATISTICS: "False"
       # Multi-threaded queue workers use noticeably less RAM than the
       # multi-process default — fine for a small instance.
       CONFIG_application_server__queue_workers_multiprocess: "false"

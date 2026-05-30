@@ -1,6 +1,6 @@
 .PHONY: help up down pull rebuild logs ps clean sync setup droplet phd-server \
        p4 p4-info p4-users p4-depots p4-logs p4-shell \
-       zulip zulip-create-org zulip-shell zulip-backup zulip-gen-secret
+       zulip zulip-create-org zulip-register-push zulip-shell zulip-backup zulip-gen-secret
 
 # ==================================================================
 # HOST DETECTION
@@ -77,6 +77,7 @@ help:
 	@echo "Zulip (phd-server):"
 	@echo "  zulip cmd='<args>'   # Run a manage.py command in the Zulip container"
 	@echo "  zulip-create-org     # Generate a one-time realm creation link"
+	@echo "  zulip-register-push  # Register this server with the Mobile Push Notification Service (interactive, accepts TOS)"
 	@echo "  zulip-shell          # Open a shell in the Zulip container"
 	@echo "  zulip-backup         # Postgres dump + tar of /data into ./backups/zulip/"
 	@echo "  zulip-gen-secret     # Print one strong random secret (for manual rotation)"
@@ -263,6 +264,11 @@ zulip:
 
 zulip-create-org:
 	$(ZULIP_MANAGE) generate_realm_creation_link
+
+# Interactive: prints the registration data to be sent, then asks for TOS
+# acceptance. Needs -it because $(ZULIP_MANAGE) does not allocate a TTY.
+zulip-register-push:
+	docker exec -it -u zulip zulip /home/zulip/deployments/current/manage.py register_server
 
 zulip-shell:
 	docker exec -it zulip bash
