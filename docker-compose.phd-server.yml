@@ -217,7 +217,11 @@ services:
         echo "zulip@localhost:$$(cat $$MEMCACHED_PASSWORD_FILE)" >> "$$MEMCACHED_SASL_PWDB"
         exec memcached -S
     secrets:
-      - zulip__memcached_password
+      # Long-form with mode 0444 — memcached:alpine runs as the unprivileged
+      # `memcache` user, and Compose's default secret mode (0400 root:root) is
+      # unreadable to it, so the SASL DB ends up written with empty passwords.
+      - source: zulip__memcached_password
+        mode: 0444
     environment:
       SASL_CONF_PATH: /home/memcache/memcached.conf
       MEMCACHED_SASL_PWDB: /home/memcache/memcached-sasl-db
@@ -236,7 +240,10 @@ services:
         echo 'default_pass = $$(RABBITMQ_DEFAULT_PASS)' >> /etc/rabbitmq/rabbitmq.conf
         exec docker-entrypoint.sh rabbitmq-server
     secrets:
-      - zulip__rabbitmq_password
+      # Long-form with mode 0444 — see the comment on zulip-memcached's secret;
+      # rabbitmq:4.2 likewise runs its entrypoint as the `rabbitmq` user.
+      - source: zulip__rabbitmq_password
+        mode: 0444
     environment:
       RABBITMQ_DEFAULT_USER: zulip
       RABBITMQ_PASSWORD_FILE: /run/secrets/zulip__rabbitmq_password
@@ -252,7 +259,10 @@ services:
       - -euc
       - '/usr/local/bin/docker-entrypoint.sh --requirepass "$$(cat $$REDIS_PASSWORD_FILE)"'
     secrets:
-      - zulip__redis_password
+      # Long-form with mode 0444 — see the comment on zulip-memcached's secret;
+      # redis:alpine likewise runs its entrypoint as the `redis` user.
+      - source: zulip__redis_password
+        mode: 0444
     environment:
       REDIS_PASSWORD_FILE: /run/secrets/zulip__redis_password
     volumes:
