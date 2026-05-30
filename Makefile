@@ -183,16 +183,31 @@ ifeq ($(HOST_NAME),droplet)
 else ifeq ($(HOST_NAME),phd-server)
 	@echo "Creating Zulip secrets and backup directory..."
 	mkdir -p zulip/secrets backups/zulip
-	@chmod 700 zulip/secrets
-	@for name in postgres_password memcached_password rabbitmq_password redis_password secret_key; do \
+	@chmod 755 zulip/secrets
+	@# postgres_password and secret_key are only read inside the Zulip and
+	@# Postgres containers' root-running entrypoints, so they stay 0600.
+	@# memcached/rabbitmq/redis sidecars run their entrypoints as unprivileged
+	@# users and read the secret file directly — Compose preserves the host
+	@# file's permissions in the container mount, so those three get 0444.
+	@for name in postgres_password secret_key; do \
 		f="zulip/secrets/$$name"; \
 		if [ ! -s "$$f" ]; then \
 			openssl rand -hex 32 | tr -d '\n' > "$$f"; \
-			chmod 600 "$$f"; \
 			echo "  generated $$f"; \
 		else \
 			echo "  kept     $$f (existing)"; \
 		fi; \
+		chmod 600 "$$f"; \
+	done
+	@for name in memcached_password rabbitmq_password redis_password; do \
+		f="zulip/secrets/$$name"; \
+		if [ ! -s "$$f" ]; then \
+			openssl rand -hex 32 | tr -d '\n' > "$$f"; \
+			echo "  generated $$f (world-readable for sidecar UID)"; \
+		else \
+			echo "  kept     $$f (existing, world-readable for sidecar UID)"; \
+		fi; \
+		chmod 644 "$$f"; \
 	done
 	@echo ""
 	@echo "Next steps:"
