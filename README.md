@@ -29,6 +29,7 @@ The stack is split across two hosts, each with its own compose file:
 | **[Perforce Helix Core](https://www.perforce.com/products/helix-core)** | Version control server |
 | **[Websidian](websidian/)** | Custom web-based viewer for Obsidian vaults |
 | **[Zulip](https://github.com/zulip/docker-zulip)** | Team chat (server + Postgres / RabbitMQ / Redis / Memcached sidecars) |
+| **[Kitsu](https://kitsu.cg-wire.com/)** | Production tracker for CG/animation (locally-built Kitsu frontend + Zou API/event/jobs + Postgres / Redis / Meilisearch) |
 
 ### How it all fits together
 
@@ -42,6 +43,7 @@ On the Server:
 - Perforce Helix Core runs as a single-binary server (`p4d`), storing all depot data in a bind-mounted directory on `/mnt/vault-3/Perforce`. It uses its own binary protocol over TCP on port 1666, exposed through Pangolin via raw TCP passthrough.
 - Websidian is a custom-built, read-only web viewer for an Obsidian vault. It mounts the vault as a read-only volume and serves a React SPA with full markdown rendering, wikilink resolution, backlinks, full-text search, and a knowledge graph. Built with Bun, Hono, and React.
 - Zulip is deployed from the [upstream docker-zulip packaging](https://github.com/zulip/docker-zulip) (pinned via `ZULIP_IMAGE_TAG`). It runs the app server with `DISABLE_HTTPS=True` behind Traefik/Pangolin and ships with its own Postgres/RabbitMQ/Redis/Memcached sidecars (prefixed `zulip-*` to match the Cumulus convention). The five auto-generated infrastructure secrets (postgres, memcached, rabbitmq, redis, Django secret key) live as Compose-mounted files in `zulip/secrets/` — `make setup phd-server` generates them on first run and you never touch them again. The setup is idempotent and self-healing: re-running it preserves existing host files, and if any are missing it restores them from the `cumulus_zulip-data` Docker volume's `zulip-secrets.conf` (so a wiped `zulip/secrets/` directory doesn't strand the persisted database with credentials it can no longer reproduce). Random generation is only the fallback when neither host file nor volume value exists. The SMTP password lives in `.env` as `ZULIP_SMTP_PASSWORD` like every other Cumulus credential, and is passed in as a `SECRETS_email_password` env var that the upstream entrypoint reads into `zulip-secrets.conf`. Until Resend issues the key, leave it empty — Zulip starts fine and just warns that SMTP is unconfigured; recreate the Zulip container after filling it in.
+- Kitsu (CGWire) is a production tracker for CG/animation/VFX pipelines. Unlike most services it is **built locally** rather than pulled — two small Dockerfiles under `kitsu/` build the Zou API from PyPI and the Kitsu frontend from CGWire's prebuilt `-build` git tag (recipe adapted from the [Mathieu Bouzard fork](https://gitlab.com/mathbou/docker-cgwire)). It runs seven containers — the Nginx frontend, three Zou roles (API, event stream, async jobs), plus Postgres, Redis, and a Meilisearch index — on a dedicated `kitsu-internal` network, isolated from the rest of the stack and reachable only through its `127.0.0.1` frontend port. Persistent data (preview media + Postgres) is bind-mounted under `/mnt/vault-3/Kitsu`. Image versions are pinned in `.env`, and because the images are built locally, upgrades are build-driven (`make kitsu-rebuild && make kitsu-upgrade`), not `make pull`. First run is `make kitsu-build && make kitsu-up && make kitsu-init`.
 
 Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-server`).
 
@@ -115,3 +117,29 @@ make zulip-gen-secret       Print a strong random secret (for manual rotation)
 ```
 
 Upgrade discipline: read the release notes, bump `ZULIP_IMAGE_TAG` in `.env`, then `make zulip-backup && make pull phd-server && make up phd-server`. Upgrade **one major version at a time**; skipping versions breaks migrations. Postgres major upgrades are a separate, deliberate operation (see [upstream docs](https://zulip.readthedocs.io/projects/docker/)).
+
+### Kitsu commands (phd-server only)
+
+Kitsu's images are **built locally**, so `make pull` does not update it. First run:
+
+```
+make kitsu-build            Build the cumulus-zou + cumulus-kitsu images (pinned versions)
+make kitsu-up               Start Kitsu's services
+make kitsu-init             First run only: seed schema, admin (from .env), search index
+```
+
+Day to day:
+
+```
+make kitsu-down             Stop just Kitsu's services
+make kitsu-restart          Restart just Kitsu's services
+make kitsu-logs             Tail Kitsu's logs
+make kitsu-ps               Show Kitsu's containers
+make kitsu-backup           Postgres dump + tar of previews into ./backups/kitsu/
+make kitsu-create-admin     Create/reset the admin user from .env
+make kitsu-reindex          Rebuild the Meilisearch index
+make kitsu-shell            Open a shell in the zou-app container
+make kitsu cmd='<args>'     Run an arbitrary zou CLI command
+```
+
+Upgrade discipline: read the [Kitsu](https://github.com/cgwire/kitsu/releases) / [Zou](https://github.com/cgwire/zou/releases) release notes, bump `KITSU_VERSION` / `ZOU_VERSION` in `.env` (one release at a time), then `make kitsu-backup && make kitsu-rebuild && make kitsu-upgrade`. Postgres major upgrades are a separate, deliberate operation. The scoped `kitsu-*` targets keep all of this off the rest of the phd-server stack.

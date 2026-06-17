@@ -28,6 +28,9 @@ perforce/p4
 zulip/secrets/
 backups/
 
+# Kitsu rendered config
+kitsu/kitsu.env
+
 # OS
 .DS_Store
 .directory
