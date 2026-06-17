@@ -325,9 +325,12 @@ services:
       - ${KITSU_PREVIEW_PATH}:/opt/zou/previews
       - kitsu-tmp:/tmp/zou
     depends_on:
-      - kitsu-db
-      - kitsu-redis
-      - kitsu-indexer
+      kitsu-db:
+        condition: service_healthy
+      kitsu-redis:
+        condition: service_started
+      kitsu-indexer:
+        condition: service_healthy
     healthcheck:
       test: "curl -s -f http://localhost:5000 | grep -q '\"api\":\"Zou\"'"
 
@@ -356,8 +359,10 @@ services:
       - ${KITSU_PREVIEW_PATH}:/opt/zou/previews
       - kitsu-tmp:/tmp/zou
     depends_on:
-      - kitsu-redis
-      - kitsu-db
+      kitsu-redis:
+        condition: service_started
+      kitsu-db:
+        condition: service_healthy
 
   kitsu-db:
     image: postgres:${KITSU_DB_VERSION:-18}-alpine
@@ -375,7 +380,14 @@ services:
       # KITSU_DB_VERSION < 18, change the target to /var/lib/postgresql/data.
       - ${KITSU_DB_PATH}:/var/lib/postgresql
     healthcheck:
-      test: "pg_isready -d zoudb -U postgres"
+      # Force a TCP check (-h 127.0.0.1): first-boot initdb runs a socket-only
+      # temp server, so a plain socket check reports healthy before the real TCP
+      # listener is up. start_period covers the initdb window on a cold start.
+      test: "pg_isready -h 127.0.0.1 -d zoudb -U postgres"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
 
   kitsu-redis:
     image: redis:alpine

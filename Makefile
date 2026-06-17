@@ -2,7 +2,7 @@
        p4 p4-info p4-users p4-depots p4-logs p4-shell \
        zulip zulip-create-org zulip-register-push zulip-shell zulip-backup zulip-gen-secret \
        kitsu kitsu-build kitsu-up kitsu-down kitsu-restart kitsu-rebuild kitsu-logs kitsu-ps \
-       kitsu-init kitsu-upgrade kitsu-create-admin kitsu-reindex kitsu-shell kitsu-backup
+       kitsu-wait-db kitsu-init kitsu-upgrade kitsu-create-admin kitsu-reindex kitsu-shell kitsu-backup
 
 # ==================================================================
 # HOST DETECTION
@@ -364,15 +364,27 @@ kitsu-logs:
 kitsu-ps:
 	$(KITSU_DC) ps $(KITSU_SERVICES)
 
+# Block until kitsu-db accepts TCP connections (the path Zou uses). Postgres'
+# first-boot initdb runs a socket-only temp server, so a fresh `up` can briefly
+# refuse TCP — this closes that race so init/upgrade don't fail on a cold start.
+kitsu-wait-db:
+	@echo "Waiting for kitsu-db to accept connections..."
+	@i=0; until docker exec kitsu-zou-app pg_isready -h kitsu-db -p 5432 -q 2>/dev/null; do \
+		i=$$((i+1)); \
+		if [ $$i -ge 30 ]; then echo "kitsu-db not ready after 60s — is the stack up? (make kitsu-up)"; exit 1; fi; \
+		sleep 2; \
+	done
+	@echo "  kitsu-db is ready."
+
 # First run only: seed schema, admin (from .env), and the search index.
-kitsu-init:
+kitsu-init: kitsu-wait-db
 	$(ZOU) upgrade-db
 	$(ZOU) init-data
 	@set -a && . ./.env && set +a && \
 		docker exec kitsu-zou-app zou create-admin "$$KITSU_ADMIN_EMAIL" --password "$$KITSU_ADMIN_PASSWORD"
 	$(ZOU) reset-search-index
 
-kitsu-upgrade:
+kitsu-upgrade: kitsu-wait-db
 	$(ZOU) upgrade-db
 
 kitsu-create-admin:
