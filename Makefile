@@ -1,8 +1,6 @@
 .PHONY: help up down pull rebuild logs ps clean sync setup droplet phd-server \
        p4 p4-info p4-users p4-depots p4-logs p4-shell \
-       zulip zulip-create-org zulip-register-push zulip-shell zulip-backup zulip-gen-secret \
-       kitsu kitsu-build kitsu-up kitsu-down kitsu-restart kitsu-rebuild kitsu-logs kitsu-ps \
-       kitsu-wait-db kitsu-init kitsu-upgrade kitsu-create-admin kitsu-reindex kitsu-shell kitsu-backup
+       zulip zulip-create-org zulip-register-push zulip-shell zulip-backup zulip-gen-secret
 
 # ==================================================================
 # HOST DETECTION
@@ -83,22 +81,6 @@ help:
 	@echo "  zulip-shell          # Open a shell in the Zulip container"
 	@echo "  zulip-backup         # Postgres dump + tar of /data into ./backups/zulip/"
 	@echo "  zulip-gen-secret     # Print one strong random secret (for manual rotation)"
-	@echo ""
-	@echo "Kitsu (phd-server):"
-	@echo "  kitsu-build          # Build the cumulus-zou + cumulus-kitsu images (pinned versions)"
-	@echo "  kitsu-up             # Start just Kitsu's services"
-	@echo "  kitsu-down           # Stop just Kitsu's services"
-	@echo "  kitsu-restart        # Restart just Kitsu's services"
-	@echo "  kitsu-rebuild        # Rebuild images + recreate only Kitsu (upgrade workhorse)"
-	@echo "  kitsu-logs           # Tail Kitsu's logs"
-	@echo "  kitsu-ps             # Show Kitsu's containers"
-	@echo "  kitsu-init           # FIRST RUN: schema + admin + search index"
-	@echo "  kitsu-upgrade        # Run Zou DB migrations after a version bump"
-	@echo "  kitsu-create-admin   # Create/reset the admin user from .env"
-	@echo "  kitsu-reindex        # Rebuild the Meilisearch index"
-	@echo "  kitsu-shell          # Open a shell in the zou-app container"
-	@echo "  kitsu-backup         # pg_dump zoudb + tar previews into ./backups/kitsu/"
-	@echo "  kitsu cmd='<args>'   # Run an arbitrary zou CLI command"
 	@echo ""
 	@echo "Repository:"
 	@echo "  sync                 # Pull latest changes from git (force, discards local changes)"
@@ -249,14 +231,7 @@ else ifeq ($(HOST_NAME),phd-server)
 	  fi; \
 	done
 	@echo ""
-	@echo "Setting up Kitsu config and data directories..."
-	@set -a && . ./.env && set +a && \
-		mkdir -p kitsu backups/kitsu "$$KITSU_PREVIEW_PATH" "$$KITSU_DB_PATH" && \
-		envsubst < kitsu/kitsu.env.template > kitsu/kitsu.env
-	@echo "  rendered kitsu/kitsu.env"
-	@echo ""
 	@echo "Next step: Run 'make up phd-server' to start services"
-	@echo "  (Kitsu first run: make kitsu-build && make kitsu-up && make kitsu-init)"
 	@echo ""
 endif
 
@@ -328,81 +303,6 @@ zulip-backup:
 
 zulip-gen-secret:
 	@openssl rand -hex 32
-
-# ==================================================================
-# KITSU / ZOU COMMANDS (phd-server only, no host arg needed)
-# ==================================================================
-
-KITSU_DC := docker compose -f docker-compose.phd-server.yml
-KITSU_SERVICES := kitsu kitsu-zou-app kitsu-zou-event kitsu-zou-jobs kitsu-db kitsu-redis kitsu-indexer
-ZOU := docker exec kitsu-zou-app zou
-KITSU_BACKUP_DIR := backups/kitsu
-KITSU_STAMP := $(shell date +%Y%m%d-%H%M%S)
-
-kitsu:
-	$(ZOU) $(cmd)
-
-kitsu-build:
-	$(KITSU_DC) build kitsu kitsu-zou-app
-
-# Scoped lifecycle — operate ONLY on Kitsu's services, never the whole stack.
-kitsu-up:
-	$(KITSU_DC) up -d $(KITSU_SERVICES)
-
-kitsu-down:
-	$(KITSU_DC) stop $(KITSU_SERVICES)
-
-kitsu-restart:
-	$(KITSU_DC) restart $(KITSU_SERVICES)
-
-kitsu-rebuild:
-	$(KITSU_DC) up -d --build --force-recreate $(KITSU_SERVICES)
-
-kitsu-logs:
-	$(KITSU_DC) logs -f $(KITSU_SERVICES)
-
-kitsu-ps:
-	$(KITSU_DC) ps $(KITSU_SERVICES)
-
-# Block until kitsu-db accepts TCP connections (the path Zou uses). Postgres'
-# first-boot initdb runs a socket-only temp server, so a fresh `up` can briefly
-# refuse TCP — this closes that race so init/upgrade don't fail on a cold start.
-kitsu-wait-db:
-	@echo "Waiting for kitsu-db to accept connections..."
-	@i=0; until docker exec kitsu-zou-app pg_isready -h kitsu-db -p 5432 -q 2>/dev/null; do \
-		i=$$((i+1)); \
-		if [ $$i -ge 30 ]; then echo "kitsu-db not ready after 60s — is the stack up? (make kitsu-up)"; exit 1; fi; \
-		sleep 2; \
-	done
-	@echo "  kitsu-db is ready."
-
-# First run only: seed schema, admin (from .env), and the search index.
-kitsu-init: kitsu-wait-db
-	$(ZOU) upgrade-db
-	$(ZOU) init-data
-	@set -a && . ./.env && set +a && \
-		docker exec kitsu-zou-app zou create-admin "$$KITSU_ADMIN_EMAIL" --password "$$KITSU_ADMIN_PASSWORD"
-	$(ZOU) reset-search-index
-
-kitsu-upgrade: kitsu-wait-db
-	$(ZOU) upgrade-db
-
-kitsu-create-admin:
-	@set -a && . ./.env && set +a && \
-		docker exec kitsu-zou-app zou create-admin "$$KITSU_ADMIN_EMAIL" --password "$$KITSU_ADMIN_PASSWORD"
-
-kitsu-reindex:
-	$(ZOU) reset-search-index
-
-kitsu-shell:
-	docker exec -it kitsu-zou-app bash
-
-kitsu-backup:
-	@mkdir -p $(KITSU_BACKUP_DIR)
-	docker exec -T kitsu-db pg_dump -U postgres zoudb | gzip > $(KITSU_BACKUP_DIR)/db-$(KITSU_STAMP).sql.gz
-	@set -a && . ./.env && set +a && \
-		tar -czf $(KITSU_BACKUP_DIR)/previews-$(KITSU_STAMP).tgz -C "$$KITSU_PREVIEW_PATH" .
-	@echo ">> Kitsu backup complete: $(KITSU_STAMP)"
 
 # ==================================================================
 # GLOBAL COMMANDS (no host needed)
