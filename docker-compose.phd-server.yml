@@ -1,12 +1,3 @@
-# Kitsu's three Zou roles share one locally-built image. Compose builds the
-# context once; all three reference the same tag.
-x-zou-build: &zou-build
-  build:
-    context: ./kitsu/zou
-    args:
-      ZOU_VERSION: ${ZOU_VERSION:-1.0.51}
-  image: cumulus-zou:${ZOU_VERSION:-1.0.51}
-
 services:
   newt:
     image: fosrl/newt
@@ -186,7 +177,7 @@ services:
       SETTING_EMAIL_USE_TLS: "True"
       SECRETS_email_password: ${ZULIP_SMTP_PASSWORD}
       # Resend only authorizes sending from a verified domain — here the apex
-      # parkerhdavis.com (same domain admin/Kitsu mail use). Left to its
+      # parkerhdavis.com (same domain admin mail uses). Left to its
       # defaults Zulip derives the noreply From from EXTERNAL_HOST, i.e.
       # noreply@zulip.parkerhdavis.com — an unverified subdomain Resend
       # rejects with "550 ... not authorized to send emails from ...". Point
@@ -295,133 +286,6 @@ services:
     volumes:
       - zulip-redis-data:/data
 
-  # Kitsu / Zou (CGWire) — production tracking for CG / animation pipelines.
-  # Images are built locally from CGWire's own artifacts (Zou via PyPI, the
-  # Kitsu frontend from the cgwire/kitsu "<version>-build" git tag) — see
-  # ./kitsu/. build.sh's runtime work from the upstream fork is absorbed here:
-  # the PG-18 data layout is pinned below and first-run init lives in
-  # `make kitsu-init`. Runtime config comes from ./kitsu/kitsu.env, rendered by
-  # `make setup phd-server`. All seven services run on the dedicated
-  # kitsu-internal network (not the shared default), reachable only via the
-  # published frontend port.
-  kitsu:
-    build:
-      context: ./kitsu/web
-      args:
-        KITSU_VERSION: ${KITSU_VERSION:-1.0.46}
-    image: cumulus-kitsu:${KITSU_VERSION:-1.0.46}
-    container_name: kitsu
-    restart: unless-stopped
-    networks:
-      - kitsu-internal
-    env_file: ./kitsu/kitsu.env
-    ports:
-      # Published on the host loopback — works even though the container is only
-      # on kitsu-internal (port publishing is independent of Docker networks).
-      - "127.0.0.1:${KITSU_HOST_PORT:-8083}:80"
-    depends_on:
-      - kitsu-zou-app
-      - kitsu-zou-event
-      - kitsu-zou-jobs
-
-  kitsu-zou-app:
-    <<: *zou-build
-    container_name: kitsu-zou-app
-    restart: unless-stopped
-    networks:
-      - kitsu-internal
-    env_file: ./kitsu/kitsu.env
-    command: "gunicorn --error-logfile - --access-logfile - -w 3 -k gevent -b :5000 zou.app:app"
-    volumes:
-      - ${KITSU_PREVIEW_PATH}:/opt/zou/previews
-      - kitsu-tmp:/tmp/zou
-    depends_on:
-      kitsu-db:
-        condition: service_healthy
-      kitsu-redis:
-        condition: service_started
-      kitsu-indexer:
-        condition: service_healthy
-    healthcheck:
-      test: "curl -s -f http://localhost:5000 | grep -q '\"api\":\"Zou\"'"
-
-  kitsu-zou-event:
-    <<: *zou-build
-    container_name: kitsu-zou-event
-    restart: unless-stopped
-    networks:
-      - kitsu-internal
-    env_file: ./kitsu/kitsu.env
-    command: "gunicorn --error-logfile - --access-logfile - -w 1 -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -b :5001 zou.event_stream:app"
-    depends_on:
-      - kitsu-redis
-    healthcheck:
-      test: "curl -s -f http://localhost:5001 | grep -q '\"api\":\"Zou\"'"
-
-  kitsu-zou-jobs:
-    <<: *zou-build
-    container_name: kitsu-zou-jobs
-    restart: unless-stopped
-    networks:
-      - kitsu-internal
-    env_file: ./kitsu/kitsu.env
-    command: "rq worker -c zou.job_settings"
-    volumes:
-      - ${KITSU_PREVIEW_PATH}:/opt/zou/previews
-      - kitsu-tmp:/tmp/zou
-    depends_on:
-      kitsu-redis:
-        condition: service_started
-      kitsu-db:
-        condition: service_healthy
-
-  kitsu-db:
-    image: postgres:${KITSU_DB_VERSION:-18}-alpine
-    container_name: kitsu-db
-    restart: unless-stopped
-    networks:
-      - kitsu-internal
-    environment:
-      # Auto-creates the DB so init only seeds schema/admin.
-      POSTGRES_DB: zoudb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${KITSU_DB_PASSWORD}
-    volumes:
-      # PG-18 uses a versioned data subdir, so mount the parent. For
-      # KITSU_DB_VERSION < 18, change the target to /var/lib/postgresql/data.
-      - ${KITSU_DB_PATH}:/var/lib/postgresql
-    healthcheck:
-      # Force a TCP check (-h 127.0.0.1): first-boot initdb runs a socket-only
-      # temp server, so a plain socket check reports healthy before the real TCP
-      # listener is up. start_period covers the initdb window on a cold start.
-      test: "pg_isready -h 127.0.0.1 -d zoudb -U postgres"
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
-
-  kitsu-redis:
-    image: redis:alpine
-    container_name: kitsu-redis
-    restart: unless-stopped
-    networks:
-      - kitsu-internal
-    volumes:
-      - kitsu-redis:/data
-
-  kitsu-indexer:
-    image: getmeili/meilisearch:${KITSU_INDEXER_VERSION:-v1.31}
-    container_name: kitsu-indexer
-    restart: unless-stopped
-    networks:
-      - kitsu-internal
-    environment:
-      MEILI_MASTER_KEY: ${KITSU_INDEXER_KEY}
-    volumes:
-      - kitsu-indexer:/meili_data
-    healthcheck:
-      test: "curl -s -f http://localhost:7700/health | grep -q '{\"status\":\"available\"}'"
-
 volumes:
   jellyfin-config:
     external: true
@@ -433,15 +297,6 @@ volumes:
   zulip-postgresql-14:
   zulip-rabbitmq:
   zulip-redis-data:
-  kitsu-redis:
-  kitsu-tmp:
-  kitsu-indexer:
-
-networks:
-  # Dedicated network for the Kitsu stack — isolates its Postgres/Redis/indexer
-  # from the rest of phd-server. Other services have no `networks:` key and so
-  # stay on the implicit default network.
-  kitsu-internal:
 
 secrets:
   zulip__postgres_password:
