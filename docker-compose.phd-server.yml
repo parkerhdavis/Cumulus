@@ -135,6 +135,24 @@ services:
       - HIDE_FOLDERS=${WEBSIDIAN_HIDE_FOLDERS:-.obsidian,.git,.trash,.stversions,.stfolder,.claude}
       - PORT=${WEBSIDIAN_PORT:-3000}
 
+  # Gokapi — lightweight self-hosted file drop (Firefox Send alternative).
+  # First-run config (admin account + public URL) is done through the web setup
+  # wizard at https://drop.${BASE_DOMAIN}/setup, like Jellyfin/Immich. Uploaded
+  # files land on a host bind-mount (they can grow) — mirroring Jellyfin media /
+  # the Immich library — while the tiny config + SQLite DB stays in a named
+  # volume. Exposed at drop.${BASE_DOMAIN} through Pangolin (HTTP → localhost:53842).
+  gokapi:
+    image: f0rc3/gokapi:latest
+    container_name: gokapi
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:53842:53842"
+    environment:
+      - TZ=${GOKAPI_TZ:-UTC}
+    volumes:
+      - ${GOKAPI_DATA_PATH}:/app/data
+      - gokapi-config:/app/config
+
   # Zulip — team chat
   # Services adapted from the upstream docker-zulip packaging
   # (https://github.com/zulip/docker-zulip). Dependent services are prefixed
@@ -293,6 +311,7 @@ volumes:
     external: true
   open-webui-data:
   immich-model-cache:
+  gokapi-config:
   zulip-data:
   zulip-postgresql-14:
   zulip-rabbitmq:
