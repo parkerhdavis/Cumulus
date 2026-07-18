@@ -7,6 +7,9 @@ CLAUDE.md
 .env
 .env.backup
 
+# Ofelia auto-generated job config (rendered from ofelia/config.ini.template)
+ofelia/config.ini
+
 # Pangolin auto-generated files
 pangolin/config/config.yml
 pangolin/config/db/
