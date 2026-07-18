@@ -3,12 +3,12 @@
 # HEVC, and writes the result into a matching subfolder under DST_ROOT (the
 # Jellyfin library). The Archival side is read-only — originals are never
 # touched. A movie is treated as already done if its Jellyfin destination
-# folder contains any "* [x265].mkv" file.
+# folder contains any "* - 2160p.mkv" file.
 #
 # Usage: transcode-batch.sh [--dry-run] [--only "Folder Name"]
 #
-# Detection: presence of "* [x265].mkv" in the matching Jellyfin folder = skip.
-# Output: <DST_ROOT>/<Folder>/<source basename> [x265].mkv
+# Detection: presence of "* - 2160p.mkv" in the matching Jellyfin folder = skip.
+# Output: <DST_ROOT>/<Folder>/<source basename> - 2160p.mkv
 
 set -uo pipefail
 
@@ -39,9 +39,9 @@ Dest   : $DST_ROOT  (Jellyfin library)
 Log    : $LOG_FILE
 
 For each subfolder under SRC_ROOT whose matching DST_ROOT folder does not
-yet contain a "* [x265].mkv" file, transcodes the source .mkv to HEVC
+yet contain a "* - 2160p.mkv" file, transcodes the source .mkv to HEVC
 (libx265 -preset slow -crf 18) with HDR10 metadata auto-detected via
-ffprobe, and writes "<source basename> [x265].mkv" into the Jellyfin folder.
+ffprobe, and writes "<source basename> - 2160p.mkv" into the Jellyfin folder.
 EOF
 }
 
@@ -261,10 +261,10 @@ main() {
 
 		local dst_dir="$DST_ROOT/$d"
 
-		# Already-done: matching Jellyfin folder contains a "* [x265].mkv" file.
+		# Already-done: matching Jellyfin folder contains a "* - 2160p.mkv" file.
 		if [[ -d "$dst_dir" ]]; then
 			local existing
-			existing=$(find "$dst_dir" -maxdepth 1 -type f -name "* \[x265\].mkv" -print -quit)
+			existing=$(find "$dst_dir" -maxdepth 1 -type f -name "* - 2160p.mkv" -print -quit)
 			if [[ -n "$existing" ]]; then
 				log "SKIP (already in Jellyfin): $d"
 				skipped=$((skipped + 1))
@@ -287,7 +287,7 @@ main() {
 
 		local base dst dur
 		base="$(basename "$src" .mkv)"
-		dst="$dst_dir/${base} [x265].mkv"
+		dst="$dst_dir/${base} - 2160p.mkv"
 		dur=$(get_duration "$src")
 
 		q_src+=("$src")

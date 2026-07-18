@@ -35,6 +35,21 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
 
+  # Ofelia — cron-style scheduler for the Tier-3 proxy encode. It only schedules;
+  # the encode itself runs in an ephemeral linuxserver/ffmpeg container Ofelia
+  # spawns via the Docker socket (see ofelia/config.ini + media-pipeline/
+  # transcode-proxies.sh). The job config is rendered from
+  # ofelia/config.ini.template by `make setup phd-server`. No ports — internal
+  # only. The Docker socket is mounted read-only (required for job-run).
+  ofelia:
+    image: mcuadros/ofelia:latest
+    container_name: ofelia
+    restart: unless-stopped
+    command: daemon --config=/etc/ofelia/config.ini
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./ofelia/config.ini:/etc/ofelia/config.ini:ro
+
   # Immich — self-hosted photo/video management
   immich-server:
     image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
