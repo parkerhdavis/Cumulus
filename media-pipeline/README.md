@@ -76,5 +76,5 @@ Tunables (env): `MAX_FILES` (default 2 encodes/run), `CRF` (18), `PRESET` (slow)
 ## Logs
 
 - Ripping: `/mnt/vault-2/Archival/rip.log`
-- Tier-2 transcoding: `/mnt/vault-2/Archival/transcode.log`
+- Tier-2 transcoding: `/mnt/vault-2/Archival/Movies/transcode.log`
 - Tier-3 proxies: `/mnt/vault-2/Archival/proxy-logs/proxy.log`
