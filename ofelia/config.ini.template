@@ -7,8 +7,13 @@
 # `make setup phd-server`) — Ofelia's job-run can't override an entrypoint, so it
 # is baked into the image. pull = false because it's a local-only tag.
 # no-overlap prevents a second run while one is going.
+#
+# schedule is Ofelia's 6-field cron WITH SECONDS: "sec min hour dom mon dow".
+# "0 0 2 * * *" = 02:00:00 daily, in the ofelia container's timezone (set to
+# PROXY_TZ on the service). A 5-field "0 2 * * *" here would parse as
+# sec=0,min=2 and fire hourly at :02 — not what we want.
 [job-run "transcode-proxies"]
-schedule = 0 2 * * *
+schedule = 0 0 2 * * *
 image = cumulus/proxy-encoder:latest
 no-overlap = true
 pull = false
