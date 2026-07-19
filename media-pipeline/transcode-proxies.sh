@@ -140,6 +140,9 @@ for src in "${queue[@]}"; do
 	dir=$(dirname "$src")
 	stem=$(basename "$src" .mkv)
 	dst="$dir/$(proxy_stem "$stem").mkv"
+	# Encode to a .tmp then atomically rename, so a crash never leaves a
+	# half-written file that looks like a finished proxy. The .tmp extension
+	# means ffmpeg can't infer the container, so the encode passes -f matroska.
 	tmp="$dst.tmp"
 	kind=$(hdr_kind "$src")
 	src_bytes=$(stat -c %s "$src" 2>/dev/null || echo 0)
@@ -169,6 +172,7 @@ for src in "${queue[@]}"; do
 			-map_chapters 0 \
 			-metadata:s:a:0 title="Surround 5.1" \
 			-metadata:s:a:1 title="Stereo" \
+			-f matroska \
 			"$tmp"
 	then
 		mv -f "$tmp" "$dst"

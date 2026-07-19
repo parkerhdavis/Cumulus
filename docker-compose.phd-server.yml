@@ -47,6 +47,10 @@ services:
     container_name: ofelia
     restart: unless-stopped
     command: daemon --config=/etc/ofelia/config.ini
+    environment:
+      # Ofelia evaluates the job cron in the container's local time, so pin it to
+      # the media timezone — otherwise "2am" would be 2am UTC.
+      - TZ=${PROXY_TZ}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./ofelia/config.ini:/etc/ofelia/config.ini:ro
