@@ -51,16 +51,18 @@ tmux new -s rip './rip-disc.sh "Arrival (2016)"'
 ## Tier-3 proxies (Ofelia)
 
 The proxy job is scheduled by the `ofelia` service in `docker-compose.phd-server.yml`. On its
-cron schedule Ofelia spawns an ephemeral `linuxserver/ffmpeg` container that runs
-`transcode-proxies.sh` over the bind-mounted library. Config is rendered from
-`ofelia/config.ini.template` by `make setup phd-server` (schedule, `MAX_FILES`, `CRF`, and
-paths come from `.env` — `PROXY_*`).
+cron schedule Ofelia spawns an ephemeral `cumulus/proxy-encoder` container (linuxserver/ffmpeg
+with a bash entrypoint — Ofelia can't override an image entrypoint, so it's baked into the
+image via `ofelia/encoder.Dockerfile`) that runs `transcode-proxies.sh` over the bind-mounted
+library. `make setup phd-server` builds the encoder image and renders the job config from
+`ofelia/config.ini.template` (schedule, `MAX_FILES`, `CRF`, and paths come from `.env` —
+`PROXY_*`).
 
 Arm / operate it:
 
 ```bash
-docker pull linuxserver/ffmpeg:latest     # required once: job config uses pull = false
-make up phd-server                        # (or: docker compose ... up -d ofelia)
+make setup phd-server     # builds cumulus/proxy-encoder + renders the Ofelia config
+make up phd-server        # (or: docker compose -f docker-compose.phd-server.yml up -d ofelia)
 ```
 
 Run the proxy encoder by hand (host), e.g. a dry-run over the real library:
