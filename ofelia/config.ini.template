@@ -1,16 +1,18 @@
 # Ofelia job config for the Tier-3 proxy encoder. RENDERED FILE — do not edit
 # ofelia/config.ini by hand; edit this template and run `make setup phd-server`.
 #
-# job-run spawns a fresh linuxserver/ffmpeg container on the schedule, overrides
-# its entrypoint to bash, and runs the bind-mounted transcode-proxies.sh over the
-# Jellyfin media library. no-overlap prevents a second run while one is going.
+# job-run spawns a fresh cumulus/proxy-encoder container on the schedule and runs
+# the bind-mounted transcode-proxies.sh over the Jellyfin media library.
+# cumulus/proxy-encoder is linuxserver/ffmpeg with a bash entrypoint (built by
+# `make setup phd-server`) — Ofelia's job-run can't override an entrypoint, so it
+# is baked into the image. pull = false because it's a local-only tag.
+# no-overlap prevents a second run while one is going.
 [job-run "transcode-proxies"]
 schedule = 0 2 * * *
-image = linuxserver/ffmpeg:latest
+image = cumulus/proxy-encoder:latest
 no-overlap = true
 pull = false
 user = 1000:1000
-entrypoint = /bin/bash
 command = /scripts/transcode-proxies.sh
 volume = ${JELLYFIN_MEDIA_PATH}:/media
 volume = ${MEDIA_PIPELINE_PATH}:/scripts:ro

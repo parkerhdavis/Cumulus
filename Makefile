@@ -182,6 +182,9 @@ ifeq ($(HOST_NAME),droplet)
 	@echo "  1. Review generated config in pangolin/config/"
 	@echo "  2. Run 'make up droplet' to start services"
 else ifeq ($(HOST_NAME),phd-server)
+	@echo "Building the Tier-3 proxy-encoder image (ffmpeg + bash entrypoint)..."
+	@docker build -q -t cumulus/proxy-encoder:latest -f ofelia/encoder.Dockerfile ofelia/ >/dev/null && \
+		echo "  built cumulus/proxy-encoder:latest"
 	@echo "Rendering Ofelia proxy-job config and creating its state dir..."
 	@set -a && . ./.env && set +a && \
 		mkdir -p "$${PROXY_STATE_PATH:-/mnt/vault-2/Archival/proxy-logs}" && \

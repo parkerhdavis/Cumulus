@@ -36,11 +36,12 @@ services:
       - 'host.docker.internal:host-gateway'
 
   # Ofelia — cron-style scheduler for the Tier-3 proxy encode. It only schedules;
-  # the encode itself runs in an ephemeral linuxserver/ffmpeg container Ofelia
+  # the encode itself runs in an ephemeral cumulus/proxy-encoder container Ofelia
   # spawns via the Docker socket (see ofelia/config.ini + media-pipeline/
-  # transcode-proxies.sh). The job config is rendered from
-  # ofelia/config.ini.template by `make setup phd-server`. No ports — internal
-  # only. The Docker socket is mounted read-only (required for job-run).
+  # transcode-proxies.sh). Both the encoder image and the rendered job config are
+  # produced by `make setup phd-server` (image from ofelia/encoder.Dockerfile,
+  # config from ofelia/config.ini.template). No ports — internal only. The Docker
+  # socket is mounted read-only (required for job-run).
   ofelia:
     image: mcuadros/ofelia:latest
     container_name: ofelia
