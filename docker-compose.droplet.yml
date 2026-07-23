@@ -71,7 +71,11 @@ services:
       #     loop (ban -> 403s in the access log -> re-ban every ~60s).
       # Real attacks are still caught by AppSec (virtual-patching/generic-rules)
       # and the targeted crowdsecurity/traefik scenarios (sqli, traversal, etc.).
-      - DISABLE_SCENARIOS=LePresidente/http-generic-403-bf LePresidente/http-generic-404-bf
+      # NB: this is the HUB ITEM name (`cscli scenarios list`), NOT the scenario
+      # name that appears in alerts. The one hub item crowdsecurity/http-generic-bf
+      # defines both LePresidente/http-generic-403-bf and .../http-generic-404-bf;
+      # DISABLE_SCENARIOS only matches the hub item, so disabling it kills both.
+      - DISABLE_SCENARIOS=crowdsecurity/http-generic-bf
       # Idempotently registers a bouncer named "traefik" with this key at startup.
       # The Traefik plugin authenticates to LAPI with the same value
       # (crowdsecLapiKey in dynamic_config). Single source of truth: .env.
