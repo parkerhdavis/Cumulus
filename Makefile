@@ -171,6 +171,7 @@ ifeq ($(HOST_NAME),droplet)
 	@echo "Creating required directories for droplet..."
 	mkdir -p pangolin/config/traefik/logs
 	mkdir -p pangolin/config/letsencrypt
+	mkdir -p pangolin/config/crowdsec/acquis.d
 	@echo "Generating config files from templates..."
 	@set -a && . ./.env && set +a && \
 		envsubst < pangolin/config/config.yml.template > pangolin/config/config.yml && \
