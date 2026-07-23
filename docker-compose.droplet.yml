@@ -64,6 +64,14 @@ services:
     environment:
       # Traefik parser + AppSec rule collections. AppSec needs both appsec-* sets.
       - COLLECTIONS=crowdsecurity/traefik crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules
+      # Disable the generic volumetric brute-force scenarios. They infer "attack"
+      # purely from 403/404 response VOLUME, which behind Pangolin false-positives:
+      #   - apps that legitimately 403 (immich's unauthenticated API calls), and
+      #   - the bouncer's own 403 ban responses, creating a self-reinforcing ban
+      #     loop (ban -> 403s in the access log -> re-ban every ~60s).
+      # Real attacks are still caught by AppSec (virtual-patching/generic-rules)
+      # and the targeted crowdsecurity/traefik scenarios (sqli, traversal, etc.).
+      - DISABLE_SCENARIOS=LePresidente/http-generic-403-bf LePresidente/http-generic-404-bf
       # Idempotently registers a bouncer named "traefik" with this key at startup.
       # The Traefik plugin authenticates to LAPI with the same value
       # (crowdsecLapiKey in dynamic_config). Single source of truth: .env.
