@@ -78,6 +78,13 @@ make up droplet           # or: make up phd-server
 
 The generated files are gitignored, so you must run `make setup` on each host after cloning. Do **not** copy the `.template` files directly — the `${VAR}` placeholders won't be substituted at runtime.
 
+**Applying config changes:** `make setup <host>` re-renders the templates, but `make up <host>` won't restart a container whose service definition is unchanged — Docker Compose doesn't notice edits to the *contents* of bind-mounted config files. Traefik in particular reads its static config (`traefik_config.yml` — plugins, entry points, access logs) only at startup; only `dynamic_config.yml` is hot-reloaded by the file provider. So after changing any rendered Traefik config, force-recreate it:
+
+```sh
+docker compose -f docker-compose.droplet.yml up -d --force-recreate traefik
+# or, heavier (recreates the whole edge): make rebuild droplet
+```
+
 CrowdSec needs no manual bootstrap: the bouncer key is the same `CROWDSEC_LAPI_KEY` on both sides (registered on the container via `BOUNCER_KEY_traefik`, consumed by the Traefik plugin via `crowdsecLapiKey`). Its acquisition configs (`pangolin/config/crowdsec/acquis.d/*.yaml`) are committed static files — not templated — and its state (hub collections, decisions DB) lives in the `crowdsec-config` / `crowdsec-data` named volumes. On first `make up droplet`, Traefik downloads the bouncer plugin and CrowdSec pulls its collections, so give it a minute before testing. To confirm a real ban targets a real client IP, `make logs droplet s=traefik` should show your public IP as `ClientHost` in the JSON access log.
 
 ## Commands
