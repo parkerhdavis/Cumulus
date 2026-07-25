@@ -1,8 +1,3 @@
-# Claude
-.claude/
-AGENTS.md
-CLAUDE.md
-
 # Environment
 .env
 .env.backup
