@@ -51,6 +51,54 @@ services:
       - ./pangolin/config/letsencrypt:/letsencrypt
       - ./pangolin/config/traefik/logs:/var/log/traefik
 
+  # CrowdSec: reads Traefik's JSON access log, detects malicious patterns, and
+  # feeds decisions to the Traefik bouncer plugin (see traefik_config.yml.template
+  # + dynamic_config.yml.template). Also runs the AppSec/WAF engine on :7422.
+  # No published ports on purpose — Traefik reaches it as crowdsec:8080 / :7422
+  # over the internal `pangolin` network. Publishing would bypass the host
+  # firewall via Docker's NAT (see the CrowdSec community guide's warning).
+  crowdsec:
+    image: docker.io/crowdsecurity/crowdsec:latest # https://hub.docker.com/r/crowdsecurity/crowdsec
+    container_name: crowdsec
+    restart: unless-stopped
+    environment:
+      # Traefik parser + AppSec rule collections. AppSec needs both appsec-* sets.
+      - COLLECTIONS=crowdsecurity/traefik crowdsecurity/appsec-virtual-patching crowdsecurity/appsec-generic-rules
+      # Disable the generic volumetric brute-force scenarios. They infer "attack"
+      # purely from 403/404 response VOLUME, which behind Pangolin false-positives:
+      #   - apps that legitimately 403 (immich's unauthenticated API calls), and
+      #   - the bouncer's own 403 ban responses, creating a self-reinforcing ban
+      #     loop (ban -> 403s in the access log -> re-ban every ~60s).
+      # Real attacks are still caught by AppSec (virtual-patching/generic-rules)
+      # and the targeted crowdsecurity/traefik scenarios (sqli, traversal, etc.).
+      # NB: this is the HUB ITEM name (`cscli scenarios list`), NOT the scenario
+      # name that appears in alerts. The one hub item crowdsecurity/http-generic-bf
+      # defines both LePresidente/http-generic-403-bf and .../http-generic-404-bf;
+      # DISABLE_SCENARIOS only matches the hub item, so disabling it kills both.
+      - DISABLE_SCENARIOS=crowdsecurity/http-generic-bf
+      # Idempotently registers a bouncer named "traefik" with this key at startup.
+      # The Traefik plugin authenticates to LAPI with the same value
+      # (crowdsecLapiKey in dynamic_config). Single source of truth: .env.
+      - BOUNCER_KEY_traefik=${CROWDSEC_LAPI_KEY}
+    volumes:
+      # App state (hub collections, LAPI creds, decisions DB) in named volumes,
+      # per the Cumulus convention — keeps runtime state out of the working tree.
+      - crowdsec-config:/etc/crowdsec
+      - crowdsec-data:/var/lib/crowdsec/data
+      # Authored acquisition configs (tracked in git), overlaying the volume.
+      - ./pangolin/config/crowdsec/acquis.d:/etc/crowdsec/acquis.d:ro
+      # Traefik's access log, read-only.
+      - ./pangolin/config/traefik/logs:/var/log/traefik:ro
+    healthcheck:
+      test: ["CMD", "cscli", "lapi", "status"]
+      interval: "30s"
+      timeout: "10s"
+      retries: 5
+
+volumes:
+  crowdsec-config:
+  crowdsec-data:
+
 networks:
   default:
     driver: bridge

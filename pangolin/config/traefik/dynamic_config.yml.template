@@ -7,6 +7,32 @@ http:
     redirect-to-https:
       redirectScheme:
         scheme: https
+    # CrowdSec bouncer, attached globally at the websecure entryPoint (see
+    # traefik_config.yml.template). `stream` mode caches LAPI decisions locally
+    # for low-latency IP checks; AppSec (WAF) is queried live per request.
+    # WAF failures fail OPEN (do not block) so a CrowdSec outage never takes the
+    # whole edge down — the IP bouncer keeps working from its cached stream.
+    # crowdsecLapiKey mirrors BOUNCER_KEY_traefik on the crowdsec container.
+    crowdsec:
+      plugin:
+        bouncer:
+          enabled: true
+          logLevel: INFO
+          crowdsecMode: stream
+          crowdsecLapiScheme: http
+          crowdsecLapiHost: crowdsec:8080
+          crowdsecLapiKey: "${CROWDSEC_LAPI_KEY}"
+          crowdsecAppsecEnabled: true
+          crowdsecAppsecHost: crowdsec:7422
+          crowdsecAppsecFailureBlock: false
+          crowdsecAppsecUnreachableBlock: false
+          # Traefik is the edge (no proxy in front), so the client's own
+          # X-Forwarded-For is NOT trusted — the real TCP source IP is used.
+          # If IP verification shows the Docker gateway instead of real client
+          # IPs, revisit this list.
+          forwardedHeadersTrustedIPs:
+            - 127.0.0.1/32
+          # clientTrustedIPs: add LAN/admin CIDRs here to bypass all checks.
 
   routers:
     # HTTP to HTTPS redirect router

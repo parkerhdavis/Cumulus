@@ -13,6 +13,7 @@ The stack is split across two hosts, each with its own compose file:
 | **[Pangolin](https://github.com/fosrl/pangolin)** | Reverse proxy & tunnel management |
 | **[Gerbil](https://github.com/fosrl/gerbil)** | WireGuard tunnel agent for Pangolin |
 | **[Traefik](https://github.com/traefik/traefik)** | Edge router handling HTTPS termination and routing |
+| **[CrowdSec](https://github.com/crowdsecurity/crowdsec)** | Edge IPS/WAF — bans malicious IPs and inspects requests via a Traefik bouncer plugin |
 
 **phd-server** (home server) is where the actual applications run:
 
@@ -33,7 +34,7 @@ The stack is split across two hosts, each with its own compose file:
 
 ### How it all fits together
 
-On the Droplet: Pangolin, Gerbil, and Traefik run on a small cloud VPS and act as the public entry point with whatever auth/routing controls I need. Traefik terminates HTTPS and Gerbil manages WireGuard tunnels. On the home server, Newt establishes an outbound tunnel back to the Pangolin endpoint, so services like Jellyfin and Immich are reachable from the internet without exposing the home network or forwarding ports on the router.
+On the Droplet: Pangolin, Gerbil, and Traefik run on a small cloud VPS and act as the public entry point with whatever auth/routing controls I need. Traefik terminates HTTPS and Gerbil manages WireGuard tunnels. CrowdSec sits alongside Traefik as an edge IPS/WAF: a bouncer plugin is attached to Traefik's `websecure` entry point, so every HTTPS request is checked against CrowdSec's decisions (community blocklist + locally-detected bad actors) and inspected by its AppSec engine before it reaches any service. It has no published ports — Traefik reaches it over the internal network — and its WAF is configured to fail open, so a CrowdSec outage never takes the edge down. On the home server, Newt establishes an outbound tunnel back to the Pangolin endpoint, so services like Jellyfin and Immich are reachable from the internet without exposing the home network or forwarding ports on the router.
 
 On the Server: 
 
@@ -73,9 +74,18 @@ make up droplet           # or: make up phd-server
 |----------|---------------|---------------|
 | `pangolin/config/config.yml.template` | `config.yml` | `BASE_DOMAIN` |
 | `pangolin/config/traefik/traefik_config.yml.template` | `traefik_config.yml` | `ACME_EMAIL` |
-| `pangolin/config/traefik/dynamic_config.yml.template` | `dynamic_config.yml` | `BASE_DOMAIN` |
+| `pangolin/config/traefik/dynamic_config.yml.template` | `dynamic_config.yml` | `BASE_DOMAIN`, `CROWDSEC_LAPI_KEY` |
 
 The generated files are gitignored, so you must run `make setup` on each host after cloning. Do **not** copy the `.template` files directly — the `${VAR}` placeholders won't be substituted at runtime.
+
+**Applying config changes:** `make setup <host>` re-renders the templates, but `make up <host>` won't restart a container whose service definition is unchanged — Docker Compose doesn't notice edits to the *contents* of bind-mounted config files. Traefik in particular reads its static config (`traefik_config.yml` — plugins, entry points, access logs) only at startup; only `dynamic_config.yml` is hot-reloaded by the file provider. So after changing any rendered Traefik config, force-recreate it:
+
+```sh
+docker compose -f docker-compose.droplet.yml up -d --force-recreate traefik
+# or, heavier (recreates the whole edge): make rebuild droplet
+```
+
+CrowdSec needs no manual bootstrap: the bouncer key is the same `CROWDSEC_LAPI_KEY` on both sides (registered on the container via `BOUNCER_KEY_traefik`, consumed by the Traefik plugin via `crowdsecLapiKey`). Its acquisition configs (`pangolin/config/crowdsec/acquis.d/*.yaml`) are committed static files — not templated — and its state (hub collections, decisions DB) lives in the `crowdsec-config` / `crowdsec-data` named volumes. On first `make up droplet`, Traefik downloads the bouncer plugin and CrowdSec pulls its collections, so give it a minute before testing. To confirm a real ban targets a real client IP, `make logs droplet s=traefik` should show your public IP as `ClientHost` in the JSON access log.
 
 ## Commands
 

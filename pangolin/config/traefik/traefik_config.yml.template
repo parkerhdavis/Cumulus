@@ -14,6 +14,9 @@ experimental:
     badger:
       moduleName: "github.com/fosrl/badger"
       version: "v1.3.1"
+    bouncer:
+      moduleName: "github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin"
+      version: "v1.6.0"
 
 log:
   level: "INFO"
@@ -22,6 +25,21 @@ log:
   maxBackups: 3
   maxAge: 3
   compress: true
+
+# JSON access log for CrowdSec to parse. Headers default to drop (so
+# Authorization/Cookie are never written); User-Agent + forwarded-IP headers are
+# kept because CrowdSec's traefik scenarios use them. CrowdSec reads this file
+# read-only via ./pangolin/config/crowdsec/acquis.d/traefik.yaml.
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+  format: json
+  fields:
+    headers:
+      defaultMode: drop
+      names:
+        User-Agent: keep
+        X-Forwarded-For: keep
+        X-Real-Ip: keep
 
 certificatesResolvers:
   letsencrypt:
@@ -43,6 +61,13 @@ entryPoints:
       respondingTimeouts:
         readTimeout: "30m"
     http:
+      # Applies the CrowdSec bouncer to every HTTPS router — i.e. every Pangolin
+      # resource plus the Pangolin dashboard — without editing Pangolin's
+      # dynamically-generated per-resource config. Runs before each router's own
+      # badger middleware, so banned IPs are dropped before auth. The `web` (:80)
+      # entryPoint is intentionally left unguarded so ACME HTTP-01 keeps working.
+      middlewares:
+        - crowdsec@file
       tls:
         certResolver: "letsencrypt"
       encodedCharacters:

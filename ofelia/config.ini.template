@@ -1,0 +1,30 @@
+# Ofelia job config for the Tier-3 proxy encoder. RENDERED FILE — do not edit
+# ofelia/config.ini by hand; edit this template and run `make setup phd-server`.
+#
+# job-run spawns a fresh cumulus/proxy-encoder container on the schedule and runs
+# the bind-mounted transcode-proxies.sh over the Jellyfin media library.
+# cumulus/proxy-encoder is linuxserver/ffmpeg with a bash entrypoint (built by
+# `make setup phd-server`) — Ofelia's job-run can't override an entrypoint, so it
+# is baked into the image. pull = false because it's a local-only tag.
+# no-overlap prevents a second run while one is going.
+#
+# schedule is Ofelia's 6-field cron WITH SECONDS: "sec min hour dom mon dow".
+# "0 0 2 * * *" = 02:00:00 daily, in the ofelia container's timezone (set to
+# PROXY_TZ on the service). A 5-field "0 2 * * *" here would parse as
+# sec=0,min=2 and fire hourly at :02 — not what we want.
+[job-run "transcode-proxies"]
+schedule = 0 0 2 * * *
+image = cumulus/proxy-encoder:latest
+no-overlap = true
+pull = false
+user = 1000:1000
+command = /scripts/transcode-proxies.sh
+volume = ${JELLYFIN_MEDIA_PATH}:/media
+volume = ${MEDIA_PIPELINE_PATH}:/scripts:ro
+volume = ${PROXY_STATE_PATH}:/state
+environment = TZ=${PROXY_TZ}
+environment = MEDIA_ROOT=/media
+environment = LOG_FILE=/state/proxy.log
+environment = LOCK_FILE=/state/transcode-proxies.lock
+environment = MAX_FILES=${PROXY_MAX_FILES}
+environment = CRF=${PROXY_CRF}

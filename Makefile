@@ -171,6 +171,7 @@ ifeq ($(HOST_NAME),droplet)
 	@echo "Creating required directories for droplet..."
 	mkdir -p pangolin/config/traefik/logs
 	mkdir -p pangolin/config/letsencrypt
+	mkdir -p pangolin/config/crowdsec/acquis.d
 	@echo "Generating config files from templates..."
 	@set -a && . ./.env && set +a && \
 		envsubst < pangolin/config/config.yml.template > pangolin/config/config.yml && \
@@ -182,6 +183,15 @@ ifeq ($(HOST_NAME),droplet)
 	@echo "  1. Review generated config in pangolin/config/"
 	@echo "  2. Run 'make up droplet' to start services"
 else ifeq ($(HOST_NAME),phd-server)
+	@echo "Building the Tier-3 proxy-encoder image (ffmpeg + bash entrypoint)..."
+	@docker build -q -t cumulus/proxy-encoder:latest -f ofelia/encoder.Dockerfile ofelia/ >/dev/null && \
+		echo "  built cumulus/proxy-encoder:latest"
+	@echo "Rendering Ofelia proxy-job config and creating its state dir..."
+	@set -a && . ./.env && set +a && \
+		mkdir -p "$${PROXY_STATE_PATH:-/mnt/vault-2/Archival/proxy-logs}" && \
+		export MEDIA_PIPELINE_PATH="$$PWD/media-pipeline" && \
+		envsubst < ofelia/config.ini.template > ofelia/config.ini && \
+		echo "  rendered ofelia/config.ini"
 	@echo "Setting up Zulip secrets and backup directory..."
 	mkdir -p zulip/secrets backups/zulip
 	@chmod 755 zulip/secrets 2>/dev/null || true
