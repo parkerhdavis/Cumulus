@@ -1,6 +1,5 @@
 .PHONY: help up down pull rebuild logs ps clean sync setup droplet phd-server \
-       p4 p4-info p4-users p4-depots p4-logs p4-shell \
-       zulip zulip-create-org zulip-register-push zulip-shell zulip-backup zulip-gen-secret
+       p4 p4-info p4-users p4-depots p4-logs p4-shell
 
 # ==================================================================
 # HOST DETECTION
@@ -73,14 +72,6 @@ help:
 	@echo "  p4-depots            # List depots"
 	@echo "  p4-logs              # Tail the Perforce server log"
 	@echo "  p4-shell             # Open a shell in the Perforce container"
-	@echo ""
-	@echo "Zulip (phd-server):"
-	@echo "  zulip cmd='<args>'   # Run a manage.py command in the Zulip container"
-	@echo "  zulip-create-org     # Generate a one-time realm creation link"
-	@echo "  zulip-register-push  # Register this server with the Mobile Push Notification Service (interactive, accepts TOS)"
-	@echo "  zulip-shell          # Open a shell in the Zulip container"
-	@echo "  zulip-backup         # Postgres dump + tar of /data into ./backups/zulip/"
-	@echo "  zulip-gen-secret     # Print one strong random secret (for manual rotation)"
 	@echo ""
 	@echo "Repository:"
 	@echo "  sync                 # Pull latest changes from git (force, discards local changes)"
@@ -192,54 +183,6 @@ else ifeq ($(HOST_NAME),phd-server)
 		export MEDIA_PIPELINE_PATH="$$PWD/media-pipeline" && \
 		envsubst < ofelia/config.ini.template > ofelia/config.ini && \
 		echo "  rendered ofelia/config.ini"
-	@echo "Setting up Zulip secrets and backup directory..."
-	mkdir -p zulip/secrets backups/zulip
-	@chmod 755 zulip/secrets 2>/dev/null || true
-	@# Per-file logic for the five auto-generated infra secrets:
-	@#   1. Host file already has content -> keep it.
-	@#   2. Else if the cumulus_zulip-data volume holds a matching value in
-	@#      zulip-secrets.conf -> restore from there. Preserves compatibility
-	@#      with persisted Postgres / RabbitMQ / Redis / Memcached state that
-	@#      was initialized with those passwords. Without this, regenerating
-	@#      after losing the host files leaves the DB unable to authenticate.
-	@#   3. Else -> generate a random new value.
-	@# Modes: postgres + secret_key -> 0600 (read by root entrypoints only);
-	@# memcached/rabbitmq/redis -> 0644 (read by unprivileged sidecar UIDs).
-	@HAVE_VOLUME=0; \
-	if docker volume inspect cumulus_zulip-data >/dev/null 2>&1 && \
-	   docker run --rm -v cumulus_zulip-data:/data:ro alpine test -s /data/zulip-secrets.conf >/dev/null 2>&1; then \
-	  HAVE_VOLUME=1; \
-	  echo "  detected cumulus_zulip-data volume — will restore any missing secrets from it"; \
-	fi; \
-	MISSING=""; \
-	for name in postgres_password memcached_password rabbitmq_password redis_password secret_key; do \
-	  if [ -s "zulip/secrets/$$name" ]; then \
-	    echo "  kept      zulip/secrets/$$name"; \
-	  else \
-	    MISSING="$$MISSING $$name"; \
-	  fi; \
-	done; \
-	if [ -n "$$MISSING" ] && [ "$$HAVE_VOLUME" = "1" ]; then \
-	  docker run --rm \
-	    -v cumulus_zulip-data:/data:ro \
-	    -v "$$PWD/zulip/secrets:/host-secrets" \
-	    -e MISSING="$$MISSING" \
-	    alpine sh -c 'for key in $$MISSING; do \
-	      val=$$(sed -n "s/^$$key *= *//p" /data/zulip-secrets.conf); \
-	      if [ -n "$$val" ]; then \
-	        printf "%s" "$$val" > "/host-secrets/$$key"; \
-	        case "$$key" in postgres_password|secret_key) chmod 600 "/host-secrets/$$key" ;; *) chmod 644 "/host-secrets/$$key" ;; esac; \
-	        echo "  restored  zulip/secrets/$$key (from cumulus_zulip-data volume)"; \
-	      fi; \
-	    done'; \
-	fi; \
-	for name in $$MISSING; do \
-	  if [ ! -s "zulip/secrets/$$name" ]; then \
-	    openssl rand -hex 32 | tr -d '\n' > "zulip/secrets/$$name"; \
-	    case "$$name" in postgres_password|secret_key) chmod 600 "zulip/secrets/$$name" 2>/dev/null || true ;; *) chmod 644 "zulip/secrets/$$name" 2>/dev/null || true ;; esac; \
-	    echo "  generated zulip/secrets/$$name"; \
-	  fi; \
-	done
 	@echo ""
 	@echo "Next step: Run 'make up phd-server' to start services"
 	@echo ""
@@ -278,41 +221,6 @@ p4-logs:
 
 p4-shell:
 	docker exec -it perforce bash
-
-# ==================================================================
-# ZULIP COMMANDS (phd-server only, no host arg needed)
-# ==================================================================
-
-ZULIP_MANAGE := docker exec -u zulip zulip /home/zulip/deployments/current/manage.py
-ZULIP_BACKUP_DIR := backups/zulip
-ZULIP_STAMP := $(shell date +%Y%m%d-%H%M%S)
-
-zulip:
-	$(ZULIP_MANAGE) $(cmd)
-
-zulip-create-org:
-	$(ZULIP_MANAGE) generate_realm_creation_link
-
-# Interactive: prints the registration data to be sent, then asks for TOS
-# acceptance. Needs -it because $(ZULIP_MANAGE) does not allocate a TTY.
-zulip-register-push:
-	docker exec -it -u zulip zulip /home/zulip/deployments/current/manage.py register_server
-
-zulip-shell:
-	docker exec -it zulip bash
-
-# Logical Postgres dump + tar of /data (uploads + zulip-secrets.conf).
-# Losing zulip-secrets.conf makes a DB-only backup unrestorable, hence both.
-zulip-backup:
-	@mkdir -p $(ZULIP_BACKUP_DIR)
-	@echo ">> Dumping Postgres -> $(ZULIP_BACKUP_DIR)/db-$(ZULIP_STAMP).sql.gz"
-	docker exec -T zulip_database pg_dump -U zulip zulip | gzip > $(ZULIP_BACKUP_DIR)/db-$(ZULIP_STAMP).sql.gz
-	@echo ">> Archiving /data -> $(ZULIP_BACKUP_DIR)/data-$(ZULIP_STAMP).tgz"
-	docker exec -T zulip tar -czf - -C /data . > $(ZULIP_BACKUP_DIR)/data-$(ZULIP_STAMP).tgz
-	@echo ">> Backup complete: $(ZULIP_STAMP)"
-
-zulip-gen-secret:
-	@openssl rand -hex 32
 
 # ==================================================================
 # GLOBAL COMMANDS (no host needed)
