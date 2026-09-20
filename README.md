@@ -30,7 +30,6 @@ The stack is split across two hosts, each with its own compose file:
 | **[Perforce Helix Core](https://www.perforce.com/products/helix-core)** | Version control server |
 | **[Websidian](websidian/)** | Custom web-based viewer for Obsidian vaults |
 | **[Gokapi](https://github.com/Forceu/Gokapi)** | Lightweight file-drop / sharing service (Firefox Send alternative) |
-| **[Zulip](https://github.com/zulip/docker-zulip)** | Team chat (server + Postgres / RabbitMQ / Redis / Memcached sidecars) |
 
 ### How it all fits together
 
@@ -44,7 +43,6 @@ On the Server:
 - Perforce Helix Core runs as a single-binary server (`p4d`), storing all depot data in a bind-mounted directory on `/mnt/vault-3/Perforce`. It uses its own binary protocol over TCP on port 1666, exposed through Pangolin via raw TCP passthrough.
 - Websidian is a custom-built, read-only web viewer for an Obsidian vault. It mounts the vault as a read-only volume and serves a React SPA with full markdown rendering, wikilink resolution, backlinks, full-text search, and a knowledge graph. Built with Bun, Hono, and React.
 - Gokapi is a lightweight file-drop service (a self-hosted Firefox Send alternative) for sharing files via expiring links, reachable at `drop.${BASE_DOMAIN}`. Like Jellyfin and Immich it's configured through a first-run web setup wizard (`https://drop.${BASE_DOMAIN}/setup`) where you set the admin account and the public URL. Uploaded files are bind-mounted from a capacity drive via `GOKAPI_DATA_PATH` (they can accumulate), while the small config and SQLite database live in the `gokapi-config` named volume. It listens on `127.0.0.1:53842` and is exposed through Pangolin as a standard HTTP resource pointing at `localhost:53842`.
-- Zulip is deployed from the [upstream docker-zulip packaging](https://github.com/zulip/docker-zulip) (pinned via `ZULIP_IMAGE_TAG`). It runs the app server with `DISABLE_HTTPS=True` behind Traefik/Pangolin and ships with its own Postgres/RabbitMQ/Redis/Memcached sidecars (prefixed `zulip-*` to match the Cumulus convention). The five auto-generated infrastructure secrets (postgres, memcached, rabbitmq, redis, Django secret key) live as Compose-mounted files in `zulip/secrets/` — `make setup phd-server` generates them on first run and you never touch them again. The setup is idempotent and self-healing: re-running it preserves existing host files, and if any are missing it restores them from the `cumulus_zulip-data` Docker volume's `zulip-secrets.conf` (so a wiped `zulip/secrets/` directory doesn't strand the persisted database with credentials it can no longer reproduce). Random generation is only the fallback when neither host file nor volume value exists. The SMTP password lives in `.env` as `ZULIP_SMTP_PASSWORD` like every other Cumulus credential, and is passed in as a `SECRETS_email_password` env var that the upstream entrypoint reads into `zulip-secrets.conf`. Until Resend issues the key, leave it empty — Zulip starts fine and just warns that SMTP is unconfigured; recreate the Zulip container after filling it in.
 
 Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-server`).
 
@@ -114,16 +112,3 @@ make p4-depots              List depots
 make p4-logs                Tail the Perforce server log
 make p4-shell               Open a shell in the Perforce container
 ```
-
-### Zulip commands (phd-server only)
-
-```
-make zulip cmd='<args>'     Run a manage.py command in the Zulip container
-make zulip-create-org       Generate a one-time realm creation link
-make zulip-register-push    Register with the Mobile Push Notification Service (one-time, interactive)
-make zulip-shell            Open a shell in the Zulip container
-make zulip-backup           Postgres dump + tar of /data into ./backups/zulip/
-make zulip-gen-secret       Print a strong random secret (for manual rotation)
-```
-
-Upgrade discipline: read the release notes, bump `ZULIP_IMAGE_TAG` in `.env`, then `make zulip-backup && make pull phd-server && make up phd-server`. Upgrade **one major version at a time**; skipping versions breaks migrations. Postgres major upgrades are a separate, deliberate operation (see [upstream docs](https://zulip.readthedocs.io/projects/docker/)).
