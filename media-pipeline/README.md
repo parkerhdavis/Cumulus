@@ -6,7 +6,7 @@ generate a Tier-3 1080p compatibility proxy. Everything runs locally — the UHD
 (`/dev/sr0`), MakeMKV, and ffmpeg are all on this host.
 
 Full design lives in the Obsidian vault:
-`40-59 PhD Projects/45 Other/Cumulus/30-39 Pipelines/30 Blu-ray Archival Pipeline.md`.
+`~/PhD/PhD-Wiki/50 Cumulus/30-39 Pipelines/30 Blu-ray Archival Pipeline.md`.
 
 ## Scripts
 
