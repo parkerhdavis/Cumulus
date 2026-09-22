@@ -14,10 +14,6 @@ pangolin/config/traefik/traefik_config.yml
 pangolin/config/traefik/dynamic_config.yml
 pangolin/config/traefik/logs/
 
-# Websidian
-websidian/node_modules/
-websidian/build/
-
 # Perforce binaries
 perforce/p4d
 perforce/p4

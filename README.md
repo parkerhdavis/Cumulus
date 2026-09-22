@@ -28,7 +28,6 @@ The stack is split across two hosts, each with its own compose file:
 | **[Open WebUI](https://github.com/open-webui/open-webui)** | LLM chat interface with model management |
 | **[Ollama](https://github.com/ollama/ollama)** | Local LLM inference engine |
 | **[Perforce Helix Core](https://www.perforce.com/products/helix-core)** | Version control server |
-| **[Websidian](websidian/)** | Custom web-based viewer for Obsidian vaults |
 | **[Gokapi](https://github.com/Forceu/Gokapi)** | Lightweight file-drop / sharing service (Firefox Send alternative) |
 
 ### How it all fits together
@@ -41,7 +40,6 @@ On the Server:
 - Jellyfin similarly mounts its media from a larger capacity drive.
 - Open WebUI provides a browser-based chat interface backed by Ollama for local LLM inference. It can optionally connect to additional endpoints (e.g. a DGX Spark) — the Makefile resolves mDNS hostnames to IPs at startup so Docker containers can reach them. It also supports [Ollama Cloud](https://ollama.com) as an OpenAI-compatible connection — set `OLLAMA_CLOUD_API_KEY` in `.env` to enable it.
 - Perforce Helix Core runs as a single-binary server (`p4d`), storing all depot data in a bind-mounted directory on `/mnt/vault-3/Perforce`. It uses its own binary protocol over TCP on port 1666, exposed through Pangolin via raw TCP passthrough.
-- Websidian is a custom-built, read-only web viewer for an Obsidian vault. It mounts the vault as a read-only volume and serves a React SPA with full markdown rendering, wikilink resolution, backlinks, full-text search, and a knowledge graph. Built with Bun, Hono, and React.
 - Gokapi is a lightweight file-drop service (a self-hosted Firefox Send alternative) for sharing files via expiring links, reachable at `drop.${BASE_DOMAIN}`. Like Jellyfin and Immich it's configured through a first-run web setup wizard (`https://drop.${BASE_DOMAIN}/setup`) where you set the admin account and the public URL. Uploaded files are bind-mounted from a capacity drive via `GOKAPI_DATA_PATH` (they can accumulate), while the small config and SQLite database live in the `gokapi-config` named volume. It listens on `127.0.0.1:53842` and is exposed through Pangolin as a standard HTTP resource pointing at `localhost:53842`.
 
 Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-server`).

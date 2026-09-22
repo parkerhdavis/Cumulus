@@ -141,20 +141,6 @@ services:
     volumes:
       - /mnt/vault-3/Perforce:/data
 
-  # Websidian — self-hosted Obsidian vault web viewer
-  websidian:
-    build: ./websidian
-    container_name: websidian
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:${WEBSIDIAN_HOST_PORT:-3200}:${WEBSIDIAN_PORT:-3000}"
-    volumes:
-      - ${VAULT_PATH}:/vault:ro
-    environment:
-      - VAULT_PATH=/vault
-      - HIDE_FOLDERS=${WEBSIDIAN_HIDE_FOLDERS:-.obsidian,.git,.trash,.stversions,.stfolder,.claude}
-      - PORT=${WEBSIDIAN_PORT:-3000}
-
   # Gokapi — lightweight self-hosted file drop (Firefox Send alternative).
   # First-run config (admin account + public URL) is done through the web setup
   # wizard at https://drop.${BASE_DOMAIN}/setup, like Jellyfin/Immich. Uploaded
