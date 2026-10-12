@@ -1,10 +1,10 @@
 # Ofelia job config for the Tier-3 proxy encoder. RENDERED FILE — do not edit
-# ofelia/config.ini by hand; edit this template and run `make setup phd-server`.
+# ofelia/config.ini by hand; edit this template and run `make setup phd-beelink`.
 #
 # job-run spawns a fresh cumulus/proxy-encoder container on the schedule and runs
 # the bind-mounted transcode-proxies.sh over the Jellyfin media library.
 # cumulus/proxy-encoder is linuxserver/ffmpeg with a bash entrypoint (built by
-# `make setup phd-server`) — Ofelia's job-run can't override an entrypoint, so it
+# `make setup phd-beelink`) — Ofelia's job-run can't override an entrypoint, so it
 # is baked into the image. pull = false because it's a local-only tag.
 # no-overlap prevents a second run while one is going.
 #

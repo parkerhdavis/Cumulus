@@ -20,7 +20,7 @@ services:
     devices:
       - /dev/dri/renderD128:/dev/dri/renderD128
     group_add:
-      - "992"  # render group GID on phd-server; verify with: getent group render
+      - "992"  # render group GID on phd-beelink; verify with: getent group render
     environment:
       # Point the Vulkan loader at the RADV ICD bundled with jellyfin-ffmpeg
       # so HDR tone-mapping can use Vulkan compute on AMD (the image only
@@ -39,7 +39,7 @@ services:
   # the encode itself runs in an ephemeral cumulus/proxy-encoder container Ofelia
   # spawns via the Docker socket (see ofelia/config.ini + media-pipeline/
   # transcode-proxies.sh). Both the encoder image and the rendered job config are
-  # produced by `make setup phd-server` (image from ofelia/encoder.Dockerfile,
+  # produced by `make setup phd-beelink` (image from ofelia/encoder.Dockerfile,
   # config from ofelia/config.ini.template). No ports — internal only. The Docker
   # socket is mounted read-only (required for job-run).
   ofelia:

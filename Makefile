@@ -1,4 +1,4 @@
-.PHONY: help up down pull rebuild logs ps clean sync setup droplet phd-server \
+.PHONY: help up down pull rebuild logs ps clean sync setup droplet phd-beelink phd-tower \
        p4 p4-info p4-users p4-depots p4-logs p4-shell
 
 # ==================================================================
@@ -10,15 +10,20 @@ ifneq (,$(filter droplet,$(MAKECMDGOALS)))
   HOST_NAME := droplet
 endif
 
-ifneq (,$(filter phd-server,$(MAKECMDGOALS)))
-  COMPOSE_FILE := docker-compose.phd-server.yml
-  HOST_NAME := phd-server
+ifneq (,$(filter phd-beelink,$(MAKECMDGOALS)))
+  COMPOSE_FILE := docker-compose.phd-beelink.yml
+  HOST_NAME := phd-beelink
+endif
+
+ifneq (,$(filter phd-tower,$(MAKECMDGOALS)))
+  COMPOSE_FILE := docker-compose.phd-tower.yml
+  HOST_NAME := phd-tower
 endif
 
 DOCKER_COMPOSE := docker compose -f $(COMPOSE_FILE)
 
 # No-op targets so make doesn't complain about "No rule to make target"
-droplet phd-server:
+droplet phd-beelink phd-tower:
 	@:
 
 # ==================================================================
@@ -32,7 +37,8 @@ help:
 	@echo ""
 	@echo "Hosts:"
 	@echo "  droplet              # DigitalOcean droplet (pangolin, gerbil, traefik)"
-	@echo "  phd-server           # Home server (newt)"
+	@echo "  phd-beelink          # Home server (newt, jellyfin, immich, ...)"
+	@echo "  phd-tower            # Tower PC (pangolin site agent)"
 	@echo ""
 	@echo "Running:"
 	@echo "  up <host>            # Start services"
@@ -51,7 +57,7 @@ help:
 	@echo "Cleanup:"
 	@echo "  clean <host>         # Stop services and remove ephemeral Docker resources"
 	@echo ""
-	@echo "Perforce (phd-server):"
+	@echo "Perforce (phd-beelink):"
 	@echo "  p4 <cmd>             # Run any p4 command in the container (e.g. make p4 cmd='verify -q //...')"
 	@echo "  p4-info              # Show server info"
 	@echo "  p4-users             # List users"
@@ -64,7 +70,7 @@ help:
 	@echo ""
 	@echo "Examples:"
 	@echo "  make up droplet      # Start Pangolin services on droplet"
-	@echo "  make logs phd-server # View Newt logs on home server"
+	@echo "  make logs phd-beelink # View Newt logs on home server"
 	@echo ""
 
 # ==================================================================
@@ -72,7 +78,7 @@ help:
 # ==================================================================
 
 define require_host
-	$(if $(HOST_NAME),,$(error Specify a host: make $(1) droplet OR make $(1) phd-server))
+	$(if $(HOST_NAME),,$(error Specify a host: make $(1) droplet, phd-beelink, or phd-tower))
 endef
 
 # -------------
@@ -151,7 +157,7 @@ ifeq ($(HOST_NAME),droplet)
 	@echo "Next steps:"
 	@echo "  1. Review generated config in pangolin/config/"
 	@echo "  2. Run 'make up droplet' to start services"
-else ifeq ($(HOST_NAME),phd-server)
+else ifeq ($(HOST_NAME),phd-beelink)
 	@echo "Building the Tier-3 proxy-encoder image (ffmpeg + bash entrypoint)..."
 	@docker build -q -t cumulus/proxy-encoder:latest -f ofelia/encoder.Dockerfile ofelia/ >/dev/null && \
 		echo "  built cumulus/proxy-encoder:latest"
@@ -162,7 +168,12 @@ else ifeq ($(HOST_NAME),phd-server)
 		envsubst < ofelia/config.ini.template > ofelia/config.ini && \
 		echo "  rendered ofelia/config.ini"
 	@echo ""
-	@echo "Next step: Run 'make up phd-server' to start services"
+	@echo "Next step: Run 'make up phd-beelink' to start services"
+	@echo ""
+else ifeq ($(HOST_NAME),phd-tower)
+	@echo "Nothing to render for phd-tower — config comes entirely from .env"
+	@echo ""
+	@echo "Next step: Run 'make up phd-tower' to start services"
 	@echo ""
 endif
 
@@ -177,7 +188,7 @@ clean:
 	@echo "Cleanup complete on $(HOST_NAME)"
 
 # ==================================================================
-# PERFORCE COMMANDS (phd-server only, no host arg needed)
+# PERFORCE COMMANDS (phd-beelink only, no host arg needed)
 # ==================================================================
 
 P4 := docker exec perforce p4 -p 127.0.0.1:1666

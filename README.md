@@ -4,7 +4,7 @@ Self-hosted services running on personal infrastructure, managed with Docker Com
 
 ## Services
 
-The stack is split across two hosts, each with its own compose file:
+The stack is split across three hosts, each with its own compose file:
 
 **Droplet** (DigitalOcean VPS) is the public-facing edge:
 
@@ -15,7 +15,7 @@ The stack is split across two hosts, each with its own compose file:
 | **[Traefik](https://github.com/traefik/traefik)** | Edge router handling HTTPS termination and routing |
 | **[CrowdSec](https://github.com/crowdsecurity/crowdsec)** | Edge IPS/WAF — bans malicious IPs and inspects requests via a Traefik bouncer plugin |
 
-**phd-server** (home server) is where the actual applications run:
+**phd-beelink** (home server) is where the actual applications run:
 
 | Service | Description |
 |---------|-------------|
@@ -30,9 +30,15 @@ The stack is split across two hosts, each with its own compose file:
 | **[Perforce Helix Core](https://www.perforce.com/products/helix-core)** | Version control server |
 | **[Gokapi](https://github.com/Forceu/Gokapi)** | Lightweight file-drop / sharing service (Firefox Send alternative) |
 
+**phd-tower** (tower PC) is a minimal site host:
+
+| Service | Description |
+|---------|-------------|
+| **Newt** | Pangolin site agent (`fosrl/pangolin-cli`) connecting the tower to Pangolin |
+
 ### How it all fits together
 
-On the Droplet: Pangolin, Gerbil, and Traefik run on a small cloud VPS and act as the public entry point with whatever auth/routing controls I need. Traefik terminates HTTPS and Gerbil manages WireGuard tunnels. CrowdSec sits alongside Traefik as an edge IPS/WAF: a bouncer plugin is attached to Traefik's `websecure` entry point, so every HTTPS request is checked against CrowdSec's decisions (community blocklist + locally-detected bad actors) and inspected by its AppSec engine before it reaches any service. It has no published ports — Traefik reaches it over the internal network — and its WAF is configured to fail open, so a CrowdSec outage never takes the edge down. On the home server, Newt establishes an outbound tunnel back to the Pangolin endpoint, so services like Jellyfin and Immich are reachable from the internet without exposing the home network or forwarding ports on the router.
+On the Droplet: Pangolin, Gerbil, and Traefik run on a small cloud VPS and act as the public entry point with whatever auth/routing controls I need. Traefik terminates HTTPS and Gerbil manages WireGuard tunnels. CrowdSec sits alongside Traefik as an edge IPS/WAF: a bouncer plugin is attached to Traefik's `websecure` entry point, so every HTTPS request is checked against CrowdSec's decisions (community blocklist + locally-detected bad actors) and inspected by its AppSec engine before it reaches any service. It has no published ports — Traefik reaches it over the internal network — and its WAF is configured to fail open, so a CrowdSec outage never takes the edge down. On the home server, Newt establishes an outbound tunnel back to the Pangolin endpoint, so services like Jellyfin and Immich are reachable from the internet without exposing the home network or forwarding ports on the router. The tower connects the same way: its site agent dials out to Pangolin, making the machine a Pangolin site (currently running nothing else — the tunnel is the point).
 
 On the Server: 
 
@@ -42,7 +48,7 @@ On the Server:
 - Perforce Helix Core runs as a single-binary server (`p4d`), storing all depot data in a bind-mounted directory on `/mnt/vault-3/Perforce`. It uses its own binary protocol over TCP on port 1666, exposed through Pangolin via raw TCP passthrough.
 - Gokapi is a lightweight file-drop service (a self-hosted Firefox Send alternative) for sharing files via expiring links, reachable at `drop.${BASE_DOMAIN}`. Like Jellyfin and Immich it's configured through a first-run web setup wizard (`https://drop.${BASE_DOMAIN}/setup`) where you set the admin account and the public URL. Uploaded files are bind-mounted from a capacity drive via `GOKAPI_DATA_PATH` (they can accumulate), while the small config and SQLite database live in the `gokapi-config` named volume. It listens on `127.0.0.1:53842` and is exposed through Pangolin as a standard HTTP resource pointing at `localhost:53842`.
 
-Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-server`).
+Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-beelink`).
 
 ## Quick Start
 
@@ -54,10 +60,10 @@ cp .env.example .env
 # Edit .env — set BASE_DOMAIN, ACME_EMAIL, and the secrets for your host
 
 # 2. Run setup (creates directories and generates config from templates)
-make setup droplet        # or: make setup phd-server
+make setup droplet        # or: make setup phd-beelink
 
 # 3. Start services
-make up droplet           # or: make up phd-server
+make up droplet           # or: make up phd-beelink
 ```
 
 ### What gets configured where
@@ -85,7 +91,7 @@ CrowdSec needs no manual bootstrap: the bouncer key is the same `CROWDSEC_LAPI_K
 
 ## Commands
 
-All commands take a host argument (`droplet` or `phd-server`):
+All commands take a host argument (`droplet`, `phd-beelink`, or `phd-tower`):
 
 ```
 make up <host>              Start services
@@ -100,7 +106,7 @@ make clean <host>           Stop services and remove Docker resources
 make sync                   Force-pull latest from git
 ```
 
-### Perforce commands (phd-server only)
+### Perforce commands (phd-beelink only)
 
 ```
 make p4 cmd='<command>'     Run any p4 command in the container

@@ -1,6 +1,6 @@
 # media-pipeline
 
-Scripts that drive the Blu-ray archival pipeline on **phd-server**: rip a disc to a
+Scripts that drive the Blu-ray archival pipeline on **phd-beelink**: rip a disc to a
 Tier-1 lossless archive, transcode it to the Tier-2 Jellyfin streaming master, and
 generate a Tier-3 1080p compatibility proxy. Everything runs locally — the UHD drive
 (`/dev/sr0`), MakeMKV, and ffmpeg are all on this host.
@@ -50,19 +50,19 @@ tmux new -s rip './rip-disc.sh "Arrival (2016)"'
 
 ## Tier-3 proxies (Ofelia)
 
-The proxy job is scheduled by the `ofelia` service in `docker-compose.phd-server.yml`. On its
+The proxy job is scheduled by the `ofelia` service in `docker-compose.phd-beelink.yml`. On its
 cron schedule Ofelia spawns an ephemeral `cumulus/proxy-encoder` container (linuxserver/ffmpeg
 with a bash entrypoint — Ofelia can't override an image entrypoint, so it's baked into the
 image via `ofelia/encoder.Dockerfile`) that runs `transcode-proxies.sh` over the bind-mounted
-library. `make setup phd-server` builds the encoder image and renders the job config from
+library. `make setup phd-beelink` builds the encoder image and renders the job config from
 `ofelia/config.ini.template` (schedule, `MAX_FILES`, `CRF`, and paths come from `.env` —
 `PROXY_*`).
 
 Arm / operate it:
 
 ```bash
-make setup phd-server     # builds cumulus/proxy-encoder + renders the Ofelia config
-make up phd-server        # (or: docker compose -f docker-compose.phd-server.yml up -d ofelia)
+make setup phd-beelink     # builds cumulus/proxy-encoder + renders the Ofelia config
+make up phd-beelink        # (or: docker compose -f docker-compose.phd-beelink.yml up -d ofelia)
 ```
 
 Run the proxy encoder by hand (host), e.g. a dry-run over the real library:
