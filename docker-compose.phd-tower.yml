@@ -1,4 +1,4 @@
-# phd-tower — Pangolin site agent + xrdp sandbox desktop.
+# phd-tower — Pangolin site agent + xvnc sandbox desktop.
 #
 # fosrl/pangolin-cli is the newer site agent alongside fosrl/newt: it connects
 # back to the Pangolin endpoint and its credentials are issued as a site's
@@ -21,32 +21,22 @@ services:
       - SITE_ID=${TOWER_SITE_ID}
       - SITE_SECRET=${TOWER_SITE_SECRET}
 
-  # xrdp sandbox desktop — a containerized XFCE desktop served over native RDP
-  # on :3389 (username 'abc', password set from .env at startup; the image
-  # default is abc/abc, which would otherwise reset on recreate). Bound to
-  # loopback only: the site agent (host networking) reaches it as backend
-  # localhost:3389 for a Pangolin RDP resource. The /config volume keeps the
-  # home directory across recreates; system-level packages installed inside do
-  # not survive.
-  rdesktop:
-    image: lscr.io/linuxserver/rdesktop:ubuntu-xfce
-    container_name: rdesktop
+  # xvnc sandbox desktop — a containerized XFCE desktop (TigerVNC) speaking
+  # native RFB on :5901 for a Pangolin VNC resource. Bound to loopback only:
+  # the site agent (host networking) reaches it as backend localhost:5901.
+  # Password comes from .env (VNC_PW); home directory persists in a volume.
+  xvnc:
+    image: accetto/ubuntu-vnc-xfce-g3:latest
+    container_name: xvnc
     restart: unless-stopped
-    security_opt:
-      - seccomp:unconfined
     shm_size: "1gb"
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=America/Denver
+      - VNC_PW=${DESKTOP_PASSWORD:?DESKTOP_PASSWORD must be set in .env}
+      - VNC_RESOLUTION=1920x1080
     volumes:
-      - rdesktop-config:/config
+      - xvnc-home:/home/headless
     ports:
-      - "127.0.0.1:3389:3389"
-    entrypoint:
-      - /bin/bash
-      - -c
-      - 'echo "abc:${DESKTOP_PASSWORD:?DESKTOP_PASSWORD must be set in .env}" | chpasswd && exec /init'
+      - "127.0.0.1:5901:5901"
 
 volumes:
-  rdesktop-config:
+  xvnc-home:
