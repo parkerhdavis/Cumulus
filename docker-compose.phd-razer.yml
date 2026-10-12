@@ -17,31 +17,29 @@ services:
       - NEWT_ID=${RAZER_SITE_ID}
       - NEWT_SECRET=${RAZER_SITE_SECRET}
 
-  # xrdp sandbox desktop — a containerized XFCE desktop served over native RDP
-  # on :3389 (username 'abc', password set from .env at startup; the image
-  # default is abc/abc, which would otherwise reset on recreate). Bound to
-  # loopback only: newt (host networking) reaches it as backend localhost:3389
-  # for a Pangolin RDP resource. The /config volume keeps the home directory
-  # across recreates; system-level packages installed inside do not survive.
-  rdesktop:
-    image: lscr.io/linuxserver/rdesktop:ubuntu-xfce
-    container_name: rdesktop
+  # x11vnc — shares the machine's real X11 display (:0), containerized per the
+  # repo pattern: the host's X socket and LightDM's Xauthority are bind-mounted
+  # read-only, so this is a portal into the actual logged-in session (greeter
+  # included after a reboot) rather than a separate desktop. Password from
+  # .env; listens on the host's loopback :5900 for a Pangolin VNC resource.
+  x11vnc:
+    build: ./x11vnc
+    container_name: x11vnc
     restart: unless-stopped
-    security_opt:
-      - seccomp:unconfined
-    shm_size: "1gb"
+    # Must equal this host's hostname: the Xauthority cookie entry is keyed
+    # by it, and Xlib's auth lookup fails silently against any other name.
+    hostname: ${X_HOSTNAME:?X_HOSTNAME must be set in .env (this machine's hostname)}
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=America/Denver
+      - DESKTOP_PASSWORD=${DESKTOP_PASSWORD:?DESKTOP_PASSWORD must be set in .env}
+      - X_DISPLAY=${X_DISPLAY:-unix:0}
+      - X_AUTHORITY=${X_AUTHORITY:-/var/run/lightdm/root/:0}
     volumes:
-      - rdesktop-config:/config
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - type: bind
+        source: /var/run/lightdm/root
+        target: /var/run/lightdm/root
+        read_only: true
     ports:
-      - "127.0.0.1:3389:3389"
-    entrypoint:
-      - /bin/bash
-      - -c
-      - 'echo "abc:${DESKTOP_PASSWORD:?DESKTOP_PASSWORD must be set in .env}" | chpasswd && exec /init'
+      - "127.0.0.1:5900:5900"
 
-volumes:
-  rdesktop-config:
+volumes: {}
