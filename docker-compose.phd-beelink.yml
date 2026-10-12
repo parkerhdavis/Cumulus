@@ -125,7 +125,6 @@ services:
       - "127.0.0.1:8080:8080"
     environment:
       - DEFAULT_PROMPT_SUGGESTIONS=[{}]
-      - ENABLE_PERSISTENT_CONFIG=False
     volumes:
       - open-webui-data:/app/backend/data
 
