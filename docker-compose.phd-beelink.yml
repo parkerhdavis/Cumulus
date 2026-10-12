@@ -8,8 +8,8 @@ services:
     network_mode: host
     environment:
       - PANGOLIN_ENDPOINT=https://pangolin.${BASE_DOMAIN}
-      - NEWT_ID=${NEWT_ID}
-      - NEWT_SECRET=${NEWT_SECRET}
+      - NEWT_ID=${BEELINK_SITE_ID}
+      - NEWT_SECRET=${BEELINK_SITE_SECRET}
 
   jellyfin:
     image: jellyfin/jellyfin
@@ -104,33 +104,6 @@ services:
       - ${IMMICH_DB_PATH}:/var/lib/postgresql/data
     shm_size: 128mb
 
-  # Open WebUI + Ollama — local LLM interface
-  ollama:
-    image: ollama/ollama
-    container_name: ollama
-    restart: unless-stopped
-    volumes:
-      - ${OLLAMA_DATA_PATH}:/root/.ollama
-
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: open-webui
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8080:8080"
-    environment:
-      - OLLAMA_BASE_URLS=${OPEN_WEBUI_OLLAMA_URLS:-http://ollama:11434}
-      - OPENAI_API_BASE_URLS=${OLLAMA_CLOUD_API_KEY:+https://ollama.com/v1}
-      - OPENAI_API_KEYS=${OLLAMA_CLOUD_API_KEY:-}
-      - DEFAULT_PROMPT_SUGGESTIONS=[{}]
-      - ENABLE_PERSISTENT_CONFIG=False
-    volumes:
-      - open-webui-data:/app/backend/data
-    depends_on:
-      - ollama
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-
   # Perforce Helix Core — version control server
   perforce:
     build: ./perforce
@@ -140,6 +113,23 @@ services:
       - "127.0.0.1:1666:1666"
     volumes:
       - /mnt/vault-3/Perforce:/data
+
+  # Open WebUI — browser-based LLM chat interface. Ollama Cloud is the only
+  # backend now (local Ollama is gone); set OLLAMA_CLOUD_API_KEY in .env to
+  # enable it — Open WebUI exposes it as an OpenAI-compatible connection.
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - OPENAI_API_BASE_URLS=${OLLAMA_CLOUD_API_KEY:+https://ollama.com/v1}
+      - OPENAI_API_KEYS=${OLLAMA_CLOUD_API_KEY:-}
+      - DEFAULT_PROMPT_SUGGESTIONS=[{}]
+      - ENABLE_PERSISTENT_CONFIG=False
+    volumes:
+      - open-webui-data:/app/backend/data
 
   # Gokapi — lightweight self-hosted file drop (Firefox Send alternative).
   # First-run config (admin account + public URL) is done through the web setup

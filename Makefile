@@ -1,5 +1,5 @@
 .PHONY: help up down pull rebuild logs ps clean sync setup droplet phd-beelink phd-tower \
-       p4 p4-info p4-users p4-depots p4-logs p4-shell
+       phd-razer p4 p4-info p4-users p4-depots p4-logs p4-shell
 
 # ==================================================================
 # HOST DETECTION
@@ -20,10 +20,15 @@ ifneq (,$(filter phd-tower,$(MAKECMDGOALS)))
   HOST_NAME := phd-tower
 endif
 
+ifneq (,$(filter phd-razer,$(MAKECMDGOALS)))
+  COMPOSE_FILE := docker-compose.phd-razer.yml
+  HOST_NAME := phd-razer
+endif
+
 DOCKER_COMPOSE := docker compose -f $(COMPOSE_FILE)
 
 # No-op targets so make doesn't complain about "No rule to make target"
-droplet phd-beelink phd-tower:
+droplet phd-beelink phd-tower phd-razer:
 	@:
 
 # ==================================================================
@@ -39,6 +44,7 @@ help:
 	@echo "  droplet              # DigitalOcean droplet (pangolin, gerbil, traefik)"
 	@echo "  phd-beelink          # Home server (newt, jellyfin, immich, ...)"
 	@echo "  phd-tower            # Tower PC (pangolin site agent)"
+	@echo "  phd-razer            # Razer workstation (newt)"
 	@echo ""
 	@echo "Running:"
 	@echo "  up <host>            # Start services"
@@ -78,7 +84,7 @@ help:
 # ==================================================================
 
 define require_host
-	$(if $(HOST_NAME),,$(error Specify a host: make $(1) droplet, phd-beelink, or phd-tower))
+	$(if $(HOST_NAME),,$(error Specify a host: make $(1) droplet, phd-beelink, phd-tower, or phd-razer))
 endef
 
 # -------------
@@ -170,10 +176,10 @@ else ifeq ($(HOST_NAME),phd-beelink)
 	@echo ""
 	@echo "Next step: Run 'make up phd-beelink' to start services"
 	@echo ""
-else ifeq ($(HOST_NAME),phd-tower)
-	@echo "Nothing to render for phd-tower — config comes entirely from .env"
+else ifeq ($(HOST_NAME),phd-razer)
+	@echo "Nothing to render for phd-razer — config comes entirely from .env"
 	@echo ""
-	@echo "Next step: Run 'make up phd-tower' to start services"
+	@echo "Next step: Run 'make up phd-razer' to start services"
 	@echo ""
 endif
 
