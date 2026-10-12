@@ -104,16 +104,6 @@ services:
       - ${IMMICH_DB_PATH}:/var/lib/postgresql/data
     shm_size: 128mb
 
-  # Perforce Helix Core — version control server
-  perforce:
-    build: ./perforce
-    container_name: perforce
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:1666:1666"
-    volumes:
-      - /mnt/vault-3/Perforce:/data
-
   # Open WebUI — browser-based LLM chat interface. Its Ollama Cloud
   # (OpenAI-compatible) connection is set from the admin UI in the app —
   # deliberately not from .env, since the key rotates periodically.

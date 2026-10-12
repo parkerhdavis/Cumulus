@@ -26,7 +26,6 @@ The stack is split across four hosts, each with its own compose file:
 | **Immich Redis** | Caching layer for Immich (Valkey) |
 | **Immich Database** | PostgreSQL with vector extensions for Immich search |
 | **[Open WebUI](https://github.com/open-webui/open-webui)** | LLM chat interface with model management |
-| **[Perforce Helix Core](https://www.perforce.com/products/helix-core)** | Version control server |
 | **[Gokapi](https://github.com/Forceu/Gokapi)** | Lightweight file-drop / sharing service (Firefox Send alternative) |
 
 **phd-tower** (tower PC) is a minimal site host:
@@ -50,7 +49,6 @@ On the Server:
 - Immich runs as a small cluster of containers: the main server, a machine-learning worker, Redis for caching, and a Postgres database with pgvector for similarity search. Its library and database are stored on a separate drive for capacity reasons. 
 - Jellyfin similarly mounts its media from a larger capacity drive.
 - Open WebUI provides a browser-based chat interface, backed by [Ollama Cloud](https://ollama.com) as an OpenAI-compatible connection — the connection and key are set from its admin UI.
-- Perforce Helix Core runs as a single-binary server (`p4d`), storing all depot data in a bind-mounted directory on `/mnt/vault-3/Perforce`. It uses its own binary protocol over TCP on port 1666, exposed through Pangolin via raw TCP passthrough.
 - Gokapi is a lightweight file-drop service (a self-hosted Firefox Send alternative) for sharing files via expiring links, reachable at `drop.${BASE_DOMAIN}`. Like Jellyfin and Immich it's configured through a first-run web setup wizard (`https://drop.${BASE_DOMAIN}/setup`) where you set the admin account and the public URL. Uploaded files are bind-mounted from a capacity drive via `GOKAPI_DATA_PATH` (they can accumulate), while the small config and SQLite database live in the `gokapi-config` named volume. It listens on `127.0.0.1:53842` and is exposed through Pangolin as a standard HTTP resource pointing at `localhost:53842`.
 
 Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-beelink`).
@@ -109,15 +107,4 @@ make ps <host>              Show running containers
 make setup <host>           Create required directories
 make clean <host>           Stop services and remove Docker resources
 make sync                   Force-pull latest from git
-```
-
-### Perforce commands (phd-beelink only)
-
-```
-make p4 cmd='<command>'     Run any p4 command in the container
-make p4-info                Show server info
-make p4-users               List users
-make p4-depots              List depots
-make p4-logs                Tail the Perforce server log
-make p4-shell               Open a shell in the Perforce container
 ```

@@ -14,10 +14,6 @@ pangolin/config/traefik/traefik_config.yml
 pangolin/config/traefik/dynamic_config.yml
 pangolin/config/traefik/logs/
 
-# Perforce binaries
-perforce/p4d
-perforce/p4
-
 # Local backups
 backups/
 
