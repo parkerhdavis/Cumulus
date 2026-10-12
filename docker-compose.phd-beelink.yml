@@ -21,12 +21,13 @@ x-obsidian-env: &obsidian-env
   OBSIDIAN_PASSWORD: ${OBSIDIAN_PASSWORD}
   OBSIDIAN_E2EE_PASSWORD: ${OBSIDIAN_E2EE_PASSWORD}
   OBSIDIAN_AUTH_TOKEN: ${OBSIDIAN_AUTH_TOKEN:-}
+  OBSIDIAN_UID: ${OBSIDIAN_UID:-1000}
+  OBSIDIAN_GID: ${OBSIDIAN_GID:-1000}
 
 x-obsidian-sync: &obsidian-sync
   build: ./obsidian-sync
   image: cumulus/obsidian-sync:latest
   restart: unless-stopped
-  user: "${OBSIDIAN_UID:-1000}:${OBSIDIAN_GID:-1000}"
 
 services:
   newt:
