@@ -27,18 +27,21 @@ The stack is split across four hosts, each with its own compose file:
 | **Immich Database** | PostgreSQL with vector extensions for Immich search |
 | **[Open WebUI](https://github.com/open-webui/open-webui)** | LLM chat interface with model management |
 | **[Gokapi](https://github.com/Forceu/Gokapi)** | Lightweight file-drop / sharing service (Firefox Send alternative) |
+| **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all ten vaults (one container per vault) |
 
-**phd-tower** (tower PC) is a minimal site host:
+**phd-tower** (tower PC) runs a Pangolin site agent plus the same headless vault sync:
 
 | Service | Description |
 |---------|-------------|
 | **Newt** | Pangolin site agent (`fosrl/pangolin-cli`) connecting the tower to Pangolin |
+| **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all ten vaults (one container per vault) |
 
-**phd-razer** (workstation) is another minimal site host:
+**phd-razer** (workstation) runs a Newt site agent plus the same headless vault sync:
 
 | Service | Description |
 |---------|-------------|
 | **Newt** | Tunnel agent connecting the workstation to Pangolin |
+| **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all ten vaults (one container per vault) |
 
 ### How it all fits together
 
@@ -52,6 +55,18 @@ On the Server:
 - Gokapi is a lightweight file-drop service (a self-hosted Firefox Send alternative) for sharing files via expiring links, reachable at `drop.${BASE_DOMAIN}`. Like Jellyfin and Immich it's configured through a first-run web setup wizard (`https://drop.${BASE_DOMAIN}/setup`) where you set the admin account and the public URL. Uploaded files are bind-mounted from a capacity drive via `GOKAPI_DATA_PATH` (they can accumulate), while the small config and SQLite database live in the `gokapi-config` named volume. It listens on `127.0.0.1:53842` and is exposed through Pangolin as a standard HTTP resource pointing at `localhost:53842`.
 
 Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-beelink`).
+
+### Headless Obsidian Sync
+
+All three phd-* hosts run [Obsidian Headless](https://obsidian.md/help/sync/headless), the official command-line client for [Obsidian Sync](https://obsidian.md/sync), so vault folders stay current whether or not Obsidian itself is running on that machine. The client has no official Docker image, so `obsidian-sync/` builds one onto `node:22-slim` from the pinned npm package. Each vault gets its own container: on startup it logs in with `OBSIDIAN_EMAIL` and `OBSIDIAN_PASSWORD` from `.env`, creates its remote vault when it doesn't exist yet (end-to-end encrypted with `OBSIDIAN_E2EE_PASSWORD`), links the local folder to it as device `<host>-<vault>`, and then runs `ob sync --continuous` so file changes propagate in both directions within seconds.
+
+The login token and per-vault setup state persist in the shared `obsidian-headless-state` volume, so a recreated container skips setup entirely and resumes watching right away. Config syncing is enforced on every start for all categories (theme, plugins and their data, hotkeys), so `.obsidian/` propagates between machines the same way it does with desktop sync; a headless client carries plugin and settings files without running the plugins itself. A remote vault whose name matches its folder name is linked, never duplicated; vaults whose remote was created under a different name get that name from a `REMOTE_VAULT_<VAULT>` variable in `.env`.
+
+Three cautions, borrowed from Obsidian's own docs and built into the workflow:
+
+- Back up the vaults before the first `make up` on a host. The initial link between a full local folder and a remote vault is a real merge, and it deserves an exit.
+- Run only one sync method per device. If the desktop app on a host also syncs one of these vaults, disable the Sync plugin for it; the headless container syncs the folder, and the desktop app just opens it.
+- If the Obsidian account uses 2FA, the automated login can't complete on its own. Log in interactively once (`docker compose -f docker-compose.phd-razer.yml run --rm --entrypoint sh obsidian-personal`, then `ob login --email <email>`); the token persists in the state volume and every other container picks it up.
 
 ## Quick Start
 
@@ -81,7 +96,7 @@ make up droplet           # or: make up phd-beelink
 | `pangolin/config/traefik/traefik_config.yml.template` | `traefik_config.yml` | `ACME_EMAIL` |
 | `pangolin/config/traefik/dynamic_config.yml.template` | `dynamic_config.yml` | `BASE_DOMAIN`, `CROWDSEC_LAPI_KEY` |
 
-The generated files are gitignored, so you must run `make setup` on each host after cloning. Do **not** copy the `.template` files directly — the `${VAR}` placeholders won't be substituted at runtime.
+The generated files are gitignored, so you must run `make setup` on each host after cloning. Do **not** copy the `.template` files directly — the `${VAR}` placeholders won't be substituted at runtime. The Obsidian Sync containers need nothing rendered; all of their config comes straight from `.env` (see the `obsidian sync` section there), and the image builds on the first `make up`.
 
 **Applying config changes:** `make setup <host>` re-renders the templates, but `make up <host>` won't restart a container whose service definition is unchanged — Docker Compose doesn't notice edits to the *contents* of bind-mounted config files. Traefik in particular reads its static config (`traefik_config.yml` — plugins, entry points, access logs) only at startup; only `dynamic_config.yml` is hot-reloaded by the file provider. So after changing any rendered Traefik config, force-recreate it:
 
