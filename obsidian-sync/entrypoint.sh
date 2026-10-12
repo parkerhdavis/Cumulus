@@ -29,10 +29,9 @@ set -eu
 mkdir -p "${HOME}/.config/obsidian-headless"
 
 VAULT_PATH="/vaults/${OBSIDIAN_VAULT_NAME}"
-REMOTE_VAULT="${OBSIDIAN_REMOTE_VAULT:-${OBSIDIAN_VAULT_NAME}}"
 DEVICE_NAME="${OBSIDIAN_DEVICE_NAME:-cumulus}"
 
-echo "[obsidian-sync] vault: ${OBSIDIAN_VAULT_NAME} (remote: ${REMOTE_VAULT})"
+echo "[obsidian-sync] vault: ${OBSIDIAN_VAULT_NAME}"
 
 # --- 1. login -------------------------------------------------------------
 
@@ -60,7 +59,7 @@ REMOTE_EXISTS=$(ob sync-list-remote --json | node -e '
 		let all = [...(j.vaults || []), ...(j.shared || [])];
 		console.log(all.some((v) => v.name === process.argv[1]) ? "yes" : "no");
 	});
-' "${REMOTE_VAULT}")
+' "${OBSIDIAN_VAULT_NAME}")
 
 LOCAL_CONFIGURED=$(ob sync-list-local --json | node -e '
 	let d = "";
@@ -74,8 +73,8 @@ LOCAL_CONFIGURED=$(ob sync-list-local --json | node -e '
 
 if [ "${REMOTE_EXISTS}" != "yes" ]; then
 	if [ "${OBSIDIAN_CREATE_REMOTE:-true}" != "true" ]; then
-		echo "[obsidian-sync] remote vault \"${REMOTE_VAULT}\" does not exist and OBSIDIAN_CREATE_REMOTE=false" >&2
-		echo "[obsidian-sync] fix OBSIDIAN_REMOTE_VAULT in .env, or create/create-remote manually" >&2
+		echo "[obsidian-sync] remote vault \"${OBSIDIAN_VAULT_NAME}\" does not exist and OBSIDIAN_CREATE_REMOTE=false" >&2
+		echo "[obsidian-sync] rename the remote vault label to match the vault (or sync-create-remote manually)" >&2
 		exit 1
 	fi
 	if [ -z "${OBSIDIAN_E2EE_PASSWORD:-}" ]; then
@@ -83,14 +82,14 @@ if [ "${REMOTE_EXISTS}" != "yes" ]; then
 		exit 1
 	fi
 	echo "[obsidian-sync] creating remote vault..."
-	ob sync-create-remote --name "${REMOTE_VAULT}" --encryption end-to-end --password "${OBSIDIAN_E2EE_PASSWORD}"
+	ob sync-create-remote --name "${OBSIDIAN_VAULT_NAME}" --encryption end-to-end --password "${OBSIDIAN_E2EE_PASSWORD}"
 fi
 
 # --- 3. link the local vault ---------------------------------------------
 
 if [ "${LOCAL_CONFIGURED}" != "yes" ]; then
 	echo "[obsidian-sync] linking local vault to remote (device: ${DEVICE_NAME})..."
-	set -- ob sync-setup --vault "${REMOTE_VAULT}" --path "${VAULT_PATH}" --device-name "${DEVICE_NAME}" --json
+	set -- ob sync-setup --vault "${OBSIDIAN_VAULT_NAME}" --path "${VAULT_PATH}" --device-name "${DEVICE_NAME}" --json
 	if [ -n "${OBSIDIAN_E2EE_PASSWORD:-}" ]; then
 		set -- "$@" --password "${OBSIDIAN_E2EE_PASSWORD}"
 	fi

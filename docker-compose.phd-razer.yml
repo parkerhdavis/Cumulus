@@ -18,10 +18,10 @@
 #
 # Caution: per Obsidian's docs, run only ONE sync method per device — if the
 # desktop Obsidian app on this machine also syncs a vault that a container
-# here syncs, disable the desktop Sync plugin for it. The per-vault
-# REMOTE_VAULT_* overrides exist for vaults whose remote vault was created
-# with a name that differs from the folder name; a default name that already
-# exists on the account is linked, not duplicated, so the defaults are safe.
+# here syncs, disable the desktop Sync plugin for it. Each container links to
+# the remote vault labeled exactly with its vault's folder name, creating one
+# under that name when none exists, so the remote label and the vault name
+# are always the same.
 x-obsidian-env: &obsidian-env
   OBSIDIAN_EMAIL: ${OBSIDIAN_EMAIL}
   OBSIDIAN_PASSWORD: ${OBSIDIAN_PASSWORD}
@@ -54,7 +54,6 @@ services:
       <<: *obsidian-env
       OBSIDIAN_VAULT_NAME: Anthers-Wiki
       OBSIDIAN_DEVICE_NAME: razer-anthers-wiki
-      OBSIDIAN_REMOTE_VAULT: ${REMOTE_VAULT_ANTHERS_WIKI:-Anthers-Wiki}
     volumes:
       - obsidian-headless-state:/state
       - ${OBSIDIAN_VAULTS_BASE}/Anthers/Anthers-Wiki:/vaults/Anthers-Wiki
@@ -66,7 +65,6 @@ services:
       <<: *obsidian-env
       OBSIDIAN_VAULT_NAME: Carelaw-Wiki
       OBSIDIAN_DEVICE_NAME: razer-carelaw-wiki
-      OBSIDIAN_REMOTE_VAULT: ${REMOTE_VAULT_CARELAW_WIKI:-Carelaw-Wiki}
     volumes:
       - obsidian-headless-state:/state
       - ${OBSIDIAN_VAULTS_BASE}/Carelaw/Carelaw-Wiki:/vaults/Carelaw-Wiki
@@ -78,7 +76,6 @@ services:
       <<: *obsidian-env
       OBSIDIAN_VAULT_NAME: CustomChannels-Wiki
       OBSIDIAN_DEVICE_NAME: razer-customchannels-wiki
-      OBSIDIAN_REMOTE_VAULT: ${REMOTE_VAULT_CUSTOMCHANNELS_WIKI:-CustomChannels-Wiki}
     volumes:
       - obsidian-headless-state:/state
       - ${OBSIDIAN_VAULTS_BASE}/CustomChannels/CustomChannels-Wiki:/vaults/CustomChannels-Wiki
@@ -90,7 +87,6 @@ services:
       <<: *obsidian-env
       OBSIDIAN_VAULT_NAME: Polysemy-Wiki
       OBSIDIAN_DEVICE_NAME: razer-polysemy-wiki
-      OBSIDIAN_REMOTE_VAULT: ${REMOTE_VAULT_POLYSEMY_WIKI:-Polysemy-Wiki}
     volumes:
       - obsidian-headless-state:/state
       - ${OBSIDIAN_VAULTS_BASE}/Polysemy/Polysemy-Wiki:/vaults/Polysemy-Wiki
@@ -102,7 +98,6 @@ services:
       <<: *obsidian-env
       OBSIDIAN_VAULT_NAME: GameDev-Wiki
       OBSIDIAN_DEVICE_NAME: razer-gamedev-wiki
-      OBSIDIAN_REMOTE_VAULT: ${REMOTE_VAULT_GAMEDEV_WIKI:-GameDev-Wiki}
     volumes:
       - obsidian-headless-state:/state
       - ${OBSIDIAN_VAULTS_BASE}/GameDev/GameDev-Wiki:/vaults/GameDev-Wiki
@@ -114,7 +109,6 @@ services:
       <<: *obsidian-env
       OBSIDIAN_VAULT_NAME: Software-Wiki
       OBSIDIAN_DEVICE_NAME: razer-software-wiki
-      OBSIDIAN_REMOTE_VAULT: ${REMOTE_VAULT_SOFTWARE_WIKI:-Software-Wiki}
     volumes:
       - obsidian-headless-state:/state
       - ${OBSIDIAN_VAULTS_BASE}/Software/Software-Wiki:/vaults/Software-Wiki
@@ -126,7 +120,6 @@ services:
       <<: *obsidian-env
       OBSIDIAN_VAULT_NAME: Musicmaking-Wiki
       OBSIDIAN_DEVICE_NAME: razer-musicmaking-wiki
-      OBSIDIAN_REMOTE_VAULT: ${REMOTE_VAULT_MUSICMAKING_WIKI:-Musicmaking-Wiki}
     volumes:
       - obsidian-headless-state:/state
       - ${OBSIDIAN_VAULTS_BASE}/Musicmaking/Musicmaking-Wiki:/vaults/Musicmaking-Wiki
@@ -138,7 +131,6 @@ services:
       <<: *obsidian-env
       OBSIDIAN_VAULT_NAME: Filmmaking-Wiki
       OBSIDIAN_DEVICE_NAME: razer-filmmaking-wiki
-      OBSIDIAN_REMOTE_VAULT: ${REMOTE_VAULT_FILMMAKING_WIKI:-Filmmaking-Wiki}
     volumes:
       - obsidian-headless-state:/state
       - ${OBSIDIAN_VAULTS_BASE}/Filmmaking/Filmmaking-Wiki:/vaults/Filmmaking-Wiki
@@ -150,7 +142,6 @@ services:
       <<: *obsidian-env
       OBSIDIAN_VAULT_NAME: PhD-Wiki
       OBSIDIAN_DEVICE_NAME: razer-phd-wiki
-      OBSIDIAN_REMOTE_VAULT: ${REMOTE_VAULT_PHD_WIKI:-PhD-Wiki}
     volumes:
       - obsidian-headless-state:/state
       - ${OBSIDIAN_VAULTS_BASE}/PhD-Wiki:/vaults/PhD-Wiki
@@ -162,7 +153,6 @@ services:
       <<: *obsidian-env
       OBSIDIAN_VAULT_NAME: Personal
       OBSIDIAN_DEVICE_NAME: razer-personal
-      OBSIDIAN_REMOTE_VAULT: ${REMOTE_VAULT_PERSONAL:-Personal}
     volumes:
       - obsidian-headless-state:/state
       - ${OBSIDIAN_VAULTS_BASE}/Personal:/vaults/Personal
