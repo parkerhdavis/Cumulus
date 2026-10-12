@@ -1,20 +1,52 @@
-# phd-tower — Pangolin site agent only.
+# phd-tower — Pangolin site agent + xrdp sandbox desktop.
 #
 # fosrl/pangolin-cli is the newer site agent alongside fosrl/newt: it connects
 # back to the Pangolin endpoint and its credentials are issued as a site's
 # ID/secret pair from the Pangolin dashboard (vs newt's client ID/secret).
 # Like newt, it makes an outbound connection — no published ports, nothing to
-# expose on the router.
-#
-# Tower has no host name in DNS and runs no apps yet, so this stack needs no
-# templates or paths — everything lives in .env under ---- phd-tower ----.
+# expose on the router. It runs on host networking so resources targeting
+# localhost resolve against the tower's own ports (same convention as the
+# newt hosts).
 
 services:
   pangolin-site:
     image: fosrl/pangolin-cli
     container_name: pangolin-site
     restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    network_mode: host
     environment:
       - PANGOLIN_ENDPOINT=https://pangolin.${BASE_DOMAIN}
       - SITE_ID=${TOWER_SITE_ID}
       - SITE_SECRET=${TOWER_SITE_SECRET}
+
+  # xrdp sandbox desktop — a containerized XFCE desktop served over native RDP
+  # on :3389 (username 'abc', password set from .env at startup; the image
+  # default is abc/abc, which would otherwise reset on recreate). Bound to
+  # loopback only: the site agent (host networking) reaches it as backend
+  # localhost:3389 for a Pangolin RDP resource. The /config volume keeps the
+  # home directory across recreates; system-level packages installed inside do
+  # not survive.
+  rdesktop:
+    image: lscr.io/linuxserver/rdesktop:ubuntu-xfce
+    container_name: rdesktop
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+    shm_size: "1gb"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Denver
+    volumes:
+      - rdesktop-config:/config
+    ports:
+      - "127.0.0.1:3389:3389"
+    entrypoint:
+      - /bin/bash
+      - -c
+      - 'echo "abc:${DESKTOP_PASSWORD:?DESKTOP_PASSWORD must be set in .env}" | chpasswd && exec /init'
+
+volumes:
+  rdesktop-config:
