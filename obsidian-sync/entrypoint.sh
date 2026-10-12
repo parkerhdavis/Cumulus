@@ -11,10 +11,11 @@
 # Steps 2-3 are skipped when the vault is already configured for this host, so
 # a recreated container goes straight to continuous sync from its state.
 #
-# Config syncing uses ob's defaults (all categories), so .obsidian/ (theme,
-# plugins, plugin data, hotkeys) syncs between machines the same way it does
-# with desktop sync. A headless client carries those files without running
-# the plugins itself.
+# Config syncing carries .obsidian/ (theme, plugins, plugin data, hotkeys) so
+# machines stay consistent the same way they do with desktop sync. ob's
+# sync-setup defaults to NO config syncing, so this is enforced explicitly
+# (all eight categories) on every start, not just at setup. A headless client
+# carries those files without running the plugins itself.
 #
 # If login fails and the account uses 2FA, do the login interactively once and
 # retry the container — the token then persists in the state volume:
@@ -98,6 +99,13 @@ else
 	echo "[obsidian-sync] already configured — syncing"
 fi
 
-# --- 4. continuous sync ----------------------------------------------------
+# --- 4. config syncing (enforced on every start) --------------------------
+
+# ob sync-setup records an empty configs list, so enable all available
+# categories explicitly. Runs after setup, every start, so the setting
+# survives both fresh links and state carried over from older images.
+ob sync-config --path "${VAULT_PATH}" --configs "app,appearance,appearance-data,hotkey,core-plugin,core-plugin-data,community-plugin,community-plugin-data"
+
+# --- 5. continuous sync ----------------------------------------------------
 
 exec ob sync --path "${VAULT_PATH}" --continuous

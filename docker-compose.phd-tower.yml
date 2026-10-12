@@ -15,10 +15,10 @@
 # OBSIDIAN_E2EE_PASSWORD), links the local folder to it under the device name
 # `<host>-<vault>`, and then runs `ob sync --continuous`. Login + setup state
 # persists in the shared obsidian-headless state volume, so recreated
-# containers skip straight to syncing. Config syncing uses ob's defaults, so
-# .obsidian/ (theme, plugins, plugin data, hotkeys) syncs like it does between
-# desktop machines; headless clients carry those files without running the
-# plugins themselves.
+# containers skip straight to syncing. Config syncing (theme, plugins, plugin
+# data, hotkeys) is enabled explicitly by the entrypoint, so .obsidian/
+# syncs like it does between desktop machines; headless clients carry those
+# files without running the plugins themselves.
 #
 # Caution: per Obsidian's docs, run only ONE sync method per device — if the
 # desktop Obsidian app on this machine also syncs a vault that a container
