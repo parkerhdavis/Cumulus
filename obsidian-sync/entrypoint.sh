@@ -11,9 +11,10 @@
 # Steps 2-3 are skipped when the vault is already configured for this host, so
 # a recreated container goes straight to continuous sync from its state.
 #
-# Config syncing is disabled at setup time (--configs ""): the headless client
-# neither uploads nor downloads .obsidian/, leaving those files to the desktop
-# machines. It only affects what THIS device syncs, not what other devices do.
+# Config syncing uses ob's defaults (all categories), so .obsidian/ (theme,
+# plugins, plugin data, hotkeys) syncs between machines the same way it does
+# with desktop sync. A headless client carries those files without running
+# the plugins itself.
 #
 # If login fails and the account uses 2FA, do the login interactively once and
 # retry the container — the token then persists in the state volume:
@@ -93,7 +94,6 @@ if [ "${LOCAL_CONFIGURED}" != "yes" ]; then
 		set -- "$@" --password "${OBSIDIAN_E2EE_PASSWORD}"
 	fi
 	"$@"
-	ob sync-config --path "${VAULT_PATH}" --configs ""
 else
 	echo "[obsidian-sync] already configured — syncing"
 fi
