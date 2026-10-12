@@ -114,9 +114,9 @@ services:
     volumes:
       - /mnt/vault-3/Perforce:/data
 
-  # Open WebUI — browser-based LLM chat interface. Ollama Cloud is the only
-  # backend now (local Ollama is gone); set OLLAMA_CLOUD_API_KEY in .env to
-  # enable it — Open WebUI exposes it as an OpenAI-compatible connection.
+  # Open WebUI — browser-based LLM chat interface. Its Ollama Cloud
+  # (OpenAI-compatible) connection is set from the admin UI in the app —
+  # deliberately not from .env, since the key rotates periodically.
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: open-webui
@@ -124,8 +124,6 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     environment:
-      - OPENAI_API_BASE_URLS=${OLLAMA_CLOUD_API_KEY:+https://ollama.com/v1}
-      - OPENAI_API_KEYS=${OLLAMA_CLOUD_API_KEY:-}
       - DEFAULT_PROMPT_SUGGESTIONS=[{}]
       - ENABLE_PERSISTENT_CONFIG=False
     volumes:
