@@ -26,7 +26,7 @@ The stack is split across four hosts, each with its own compose file:
 | **Immich Redis** | Caching layer for Immich (Valkey) |
 | **Immich Database** | PostgreSQL with vector extensions for Immich search |
 | **[Open WebUI](https://github.com/open-webui/open-webui)** | LLM chat interface with model management |
-| **[TigerVNC](https://github.com/accetto/ubuntu-vnc-xfce-g3)** | Containerized sandbox desktop (XFCE over VNC on loopback :5901) |
+| **[x11vnc](https://github.com/LibVNC/x11vnc)** | Containerized VNC server sharing the host's real display (loopback :5900) |
 | **[Gokapi](https://github.com/Forceu/Gokapi)** | Lightweight file-drop / sharing service (Firefox Send alternative) |
 
 **phd-tower** (tower PC) is a minimal site host:
@@ -34,18 +34,18 @@ The stack is split across four hosts, each with its own compose file:
 | Service | Description |
 |---------|-------------|
 | **Newt** | Pangolin site agent (`fosrl/pangolin-cli`) connecting the tower to Pangolin |
-| **[TigerVNC](https://github.com/accetto/ubuntu-vnc-xfce-g3)** | Containerized sandbox desktop (XFCE over VNC on loopback :5901) |
+| **[x11vnc](https://github.com/LibVNC/x11vnc)** | Containerized VNC server sharing the host's real display (loopback :5900) |
 
 **phd-razer** (workstation) is another minimal site host:
 
 | Service | Description |
 |---------|-------------|
 | **Newt** | Tunnel agent connecting the workstation to Pangolin |
-| **[TigerVNC](https://github.com/accetto/ubuntu-vnc-xfce-g3)** | Containerized sandbox desktop (XFCE over VNC on loopback :5901) |
+| **[x11vnc](https://github.com/LibVNC/x11vnc)** | Containerized VNC server sharing the host's real display (loopback :5900) |
 
 ### How it all fits together
 
-On the Droplet: Pangolin, Gerbil, and Traefik run on a small cloud VPS and act as the public entry point with whatever auth/routing controls I need. Traefik terminates HTTPS and Gerbil manages WireGuard tunnels. CrowdSec sits alongside Traefik as an edge IPS/WAF: a bouncer plugin is attached to Traefik's `websecure` entry point, so every HTTPS request is checked against CrowdSec's decisions (community blocklist + locally-detected bad actors) and inspected by its AppSec engine before it reaches any service. It has no published ports — Traefik reaches it over the internal network — and its WAF is configured to fail open, so a CrowdSec outage never takes the edge down. On the home server, Newt establishes an outbound tunnel back to the Pangolin endpoint, so services like Jellyfin and Immich are reachable from the internet without exposing the home network or forwarding ports on the router. The tower and the workstation connect the same way — their site agents dial out to Pangolin, making each machine a Pangolin site, and each site host serves a containerized VNC desktop (below) through that tunnel.
+On the Droplet: Pangolin, Gerbil, and Traefik run on a small cloud VPS and act as the public entry point with whatever auth/routing controls I need. Traefik terminates HTTPS and Gerbil manages WireGuard tunnels. CrowdSec sits alongside Traefik as an edge IPS/WAF: a bouncer plugin is attached to Traefik's `websecure` entry point, so every HTTPS request is checked against CrowdSec's decisions (community blocklist + locally-detected bad actors) and inspected by its AppSec engine before it reaches any service. It has no published ports — Traefik reaches it over the internal network — and its WAF is configured to fail open, so a CrowdSec outage never takes the edge down. On the home server, Newt establishes an outbound tunnel back to the Pangolin endpoint, so services like Jellyfin and Immich are reachable from the internet without exposing the home network or forwarding ports on the router. The tower and the workstation connect the same way — their site agents dial out to Pangolin, making each machine a Pangolin site, and each site host runs a containerized x11vnc server that shares the machine's real display (below) through that tunnel.
 
 On the Server: 
 
@@ -58,7 +58,7 @@ Each host is managed independently via the Makefile (e.g. `make up droplet`, `ma
 
 ### Remote desktop
 
-Each site host also runs a containerized VNC desktop (`accetto/ubuntu-vnc-xfce-g3`, XFCE + TigerVNC) on loopback `:5901`, so the machine is reachable through a Pangolin **VNC public resource** configured in the dashboard with backend `localhost:5901` — the browser client and Pangolin auth handle the rest. Connect with the VNC password from the host's `DESKTOP_PASSWORD` in `.env` (passed as the image's `VNC_PW`; compose recreates the container when it changes). The desktop's home directory persists in the `xvnc-home` volume. The desktop user is `headless`, and it has sudo.
+Each site host runs a containerized `x11vnc` (built from `x11vnc/Dockerfile`) that shares the machine's **real** X11 display — the host's X socket and LightDM's Xauthority are bind-mounted read-only, so a Pangolin **VNC public resource** (backend `localhost:5900`) lands you in the actual logged-in session, on the actual screen, not a containerized sandbox. The VNC password is the host's `DESKTOP_PASSWORD` from `.env` (only its first 8 characters matter — the VNC auth format truncates). A host with no running X session — a headless server, or before someone logs in — has nothing to share, and the resource stays down until a session exists.
 
 ## Quick Start
 

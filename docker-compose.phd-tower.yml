@@ -1,4 +1,4 @@
-# phd-tower — Pangolin site agent + xvnc sandbox desktop.
+# phd-tower — Pangolin site agent + x11vnc sharing the real display.
 #
 # fosrl/pangolin-cli is the newer site agent alongside fosrl/newt: it connects
 # back to the Pangolin endpoint and its credentials are issued as a site's
@@ -21,22 +21,29 @@ services:
       - SITE_ID=${TOWER_SITE_ID}
       - SITE_SECRET=${TOWER_SITE_SECRET}
 
-  # xvnc sandbox desktop — a containerized XFCE desktop (TigerVNC) speaking
-  # native RFB on :5901 for a Pangolin VNC resource. Bound to loopback only:
-  # the site agent (host networking) reaches it as backend localhost:5901.
-  # Password comes from .env (VNC_PW); home directory persists in a volume.
-  xvnc:
-    image: accetto/ubuntu-vnc-xfce-g3:latest
-    container_name: xvnc
+  # x11vnc — shares the machine's real X11 display (:0), containerized per the
+  # repo pattern: the host's X socket and LightDM's Xauthority are bind-mounted
+  # read-only, so this is a portal into the actual logged-in session (greeter
+  # included after a reboot) rather than a separate desktop. Password from
+  # .env; listens on the host's loopback :5900 for a Pangolin VNC resource.
+  x11vnc:
+    build: ./x11vnc
+    container_name: x11vnc
     restart: unless-stopped
-    shm_size: "1gb"
+    # Must equal this host's hostname: the Xauthority cookie entry is keyed
+    # by it, and Xlib's auth lookup fails silently against any other name.
+    hostname: ${X_HOSTNAME:?X_HOSTNAME must be set in .env (this machine's hostname)}
     environment:
-      - VNC_PW=${DESKTOP_PASSWORD:?DESKTOP_PASSWORD must be set in .env}
-      - VNC_RESOLUTION=1920x1080
+      - DESKTOP_PASSWORD=${DESKTOP_PASSWORD:?DESKTOP_PASSWORD must be set in .env}
+      - X_DISPLAY=${X_DISPLAY:-unix:0}
+      - X_AUTHORITY=${X_AUTHORITY:-/var/run/lightdm/root/:0}
     volumes:
-      - xvnc-home:/home/headless
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - type: bind
+        source: /var/run/lightdm/root
+        target: /var/run/lightdm/root
+        read_only: true
     ports:
-      - "127.0.0.1:5901:5901"
+      - "127.0.0.1:5900:5900"
 
-volumes:
-  xvnc-home:
+volumes: {}
