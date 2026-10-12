@@ -4,7 +4,7 @@
 # and Ofelia's job-run cannot override a container entrypoint. So we bake a bash
 # entrypoint here; the Ofelia job's `command` is then just the script path.
 #
-# Built as cumulus/proxy-encoder:latest by `make setup phd-server`; the Ofelia
+# Built as cumulus/proxy-encoder:latest by `make setup phd-beelink`; the Ofelia
 # job references it with pull = false (it's a local-only tag).
 FROM linuxserver/ffmpeg:latest
 ENTRYPOINT ["/bin/bash"]

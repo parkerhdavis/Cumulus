@@ -1,0 +1,20 @@
+# phd-tower — Pangolin site agent only.
+#
+# fosrl/pangolin-cli is the newer site agent alongside fosrl/newt: it connects
+# back to the Pangolin endpoint and its credentials are issued as a site's
+# ID/secret pair from the Pangolin dashboard (vs newt's client ID/secret).
+# Like newt, it makes an outbound connection — no published ports, nothing to
+# expose on the router.
+#
+# Tower has no host name in DNS and runs no apps yet, so this stack needs no
+# templates or paths — everything lives in .env under ---- phd-tower ----.
+
+services:
+  pangolin-site:
+    image: fosrl/pangolin-cli
+    container_name: pangolin-site
+    restart: unless-stopped
+    environment:
+      - PANGOLIN_ENDPOINT=https://pangolin.${BASE_DOMAIN}
+      - SITE_ID=${TOWER_SITE_ID}
+      - SITE_SECRET=${TOWER_SITE_SECRET}
