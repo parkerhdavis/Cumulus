@@ -26,6 +26,7 @@ The stack is split across four hosts, each with its own compose file:
 | **Immich Redis** | Caching layer for Immich (Valkey) |
 | **Immich Database** | PostgreSQL with vector extensions for Immich search |
 | **[Open WebUI](https://github.com/open-webui/open-webui)** | LLM chat interface with model management |
+| **[xrdp](https://github.com/linuxserver/docker-rdesktop)** | Containerized sandbox desktop (XFCE over RDP on loopback :3389) |
 | **[Gokapi](https://github.com/Forceu/Gokapi)** | Lightweight file-drop / sharing service (Firefox Send alternative) |
 
 **phd-tower** (tower PC) is a minimal site host:
@@ -33,16 +34,18 @@ The stack is split across four hosts, each with its own compose file:
 | Service | Description |
 |---------|-------------|
 | **Newt** | Pangolin site agent (`fosrl/pangolin-cli`) connecting the tower to Pangolin |
+| **[xrdp](https://github.com/linuxserver/docker-rdesktop)** | Containerized sandbox desktop (XFCE over RDP on loopback :3389) |
 
 **phd-razer** (workstation) is another minimal site host:
 
 | Service | Description |
 |---------|-------------|
 | **Newt** | Tunnel agent connecting the workstation to Pangolin |
+| **[xrdp](https://github.com/linuxserver/docker-rdesktop)** | Containerized sandbox desktop (XFCE over RDP on loopback :3389) |
 
 ### How it all fits together
 
-On the Droplet: Pangolin, Gerbil, and Traefik run on a small cloud VPS and act as the public entry point with whatever auth/routing controls I need. Traefik terminates HTTPS and Gerbil manages WireGuard tunnels. CrowdSec sits alongside Traefik as an edge IPS/WAF: a bouncer plugin is attached to Traefik's `websecure` entry point, so every HTTPS request is checked against CrowdSec's decisions (community blocklist + locally-detected bad actors) and inspected by its AppSec engine before it reaches any service. It has no published ports — Traefik reaches it over the internal network — and its WAF is configured to fail open, so a CrowdSec outage never takes the edge down. On the home server, Newt establishes an outbound tunnel back to the Pangolin endpoint, so services like Jellyfin and Immich are reachable from the internet without exposing the home network or forwarding ports on the router. The tower and the workstation connect the same way — their site agents dial out to Pangolin, making each machine a Pangolin site (currently running nothing else — the tunnel is the point).
+On the Droplet: Pangolin, Gerbil, and Traefik run on a small cloud VPS and act as the public entry point with whatever auth/routing controls I need. Traefik terminates HTTPS and Gerbil manages WireGuard tunnels. CrowdSec sits alongside Traefik as an edge IPS/WAF: a bouncer plugin is attached to Traefik's `websecure` entry point, so every HTTPS request is checked against CrowdSec's decisions (community blocklist + locally-detected bad actors) and inspected by its AppSec engine before it reaches any service. It has no published ports — Traefik reaches it over the internal network — and its WAF is configured to fail open, so a CrowdSec outage never takes the edge down. On the home server, Newt establishes an outbound tunnel back to the Pangolin endpoint, so services like Jellyfin and Immich are reachable from the internet without exposing the home network or forwarding ports on the router. The tower and the workstation connect the same way — their site agents dial out to Pangolin, making each machine a Pangolin site, and each site host serves a containerized xrdp desktop (below) through that tunnel.
 
 On the Server: 
 
@@ -52,6 +55,10 @@ On the Server:
 - Gokapi is a lightweight file-drop service (a self-hosted Firefox Send alternative) for sharing files via expiring links, reachable at `drop.${BASE_DOMAIN}`. Like Jellyfin and Immich it's configured through a first-run web setup wizard (`https://drop.${BASE_DOMAIN}/setup`) where you set the admin account and the public URL. Uploaded files are bind-mounted from a capacity drive via `GOKAPI_DATA_PATH` (they can accumulate), while the small config and SQLite database live in the `gokapi-config` named volume. It listens on `127.0.0.1:53842` and is exposed through Pangolin as a standard HTTP resource pointing at `localhost:53842`.
 
 Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-beelink`).
+
+### Remote desktop
+
+Each site host also runs a containerized xrdp desktop (`linuxserver/rdesktop`, XFCE) on loopback `:3389`, so the machine is reachable through a Pangolin **RDP public resource** configured in the dashboard with backend `localhost:3389` — the browser client and Pangolin auth handle the rest. Log in with username `abc` and the host's `DESKTOP_PASSWORD` from `.env` (set at container startup, so it survives recreates). The desktop's home directory persists in the `rdesktop-config` volume; things installed system-level inside the container do not, so keep that usage throwaway or drive it through `apt` after each recreate.
 
 ## Quick Start
 
