@@ -29,11 +29,12 @@ The stack is split across four hosts, each with its own compose file:
 | **[Gokapi](https://github.com/Forceu/Gokapi)** | Lightweight file-drop / sharing service (Firefox Send alternative) |
 | **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all ten vaults (one container per vault) |
 
-**phd-tower** (tower PC) runs a Pangolin site agent plus the same headless vault sync:
+**phd-tower** (tower PC) runs a Pangolin site agent, the Forgejo forge, and the same headless vault sync:
 
 | Service | Description |
 |---------|-------------|
 | **Newt** | Pangolin site agent (`fosrl/pangolin-cli`) connecting the tower to Pangolin |
+| **[Forgejo](https://forgejo.org)** | Self-hosted git forge with Git LFS at `forge.${BASE_DOMAIN}` — web UI and git-over-HTTPS through a Pangolin HTTP resource, git-over-SSH through a raw TCP resource on port 2222 |
 | **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all ten vaults (one container per vault) |
 
 **phd-razer** (workstation) runs a Newt site agent plus the same headless vault sync:
