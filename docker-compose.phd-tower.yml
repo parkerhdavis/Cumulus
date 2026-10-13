@@ -184,6 +184,34 @@ services:
       timeout: 5s
       retries: 5
 
+  # forge-backup — the monthly restic backup of ForgeData, home, and a fresh
+  # pg_dump of forgejo-db to DO Spaces cold storage (design: phd-tower Backup
+  # Design in the Software-Wiki). Self-scheduling (crond + backup.sh in
+  # restic/), no Docker socket, dump over the compose network. Deliberately
+  # UNPLUGGED: the `backups` compose profile keeps it out of `make up` until
+  # the initial run is wanted after the project migration — plugging in is
+  # `restic init` then `docker compose -f docker-compose.phd-tower.yml
+  # --profile backups up -d backup` once BACKUP_* exists in .env.
+  backup:
+    build: ./restic
+    image: cumulus/forge-backup:latest
+    container_name: forge-backup
+    restart: unless-stopped
+    profiles:
+      - backups
+    networks:
+      - forgejo
+    environment:
+      RESTIC_REPOSITORY: ${BACKUP_REPOSITORY:-}
+      RESTIC_PASSWORD: ${BACKUP_PASSWORD:-}
+      AWS_ACCESS_KEY_ID: ${BACKUP_S3_KEY:-}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_S3_SECRET:-}
+      PGPASSWORD: ${FORGEJO_DB_PASSWORD}
+    volumes:
+      - /media/parker/ForgeData:/forge-data:ro
+      - /home/parker:/home/parker:ro
+      - forge-backup-dump:/backups
+
   obsidian-anthers-wiki:
     <<: *obsidian-sync
     container_name: obsidian-anthers-wiki
@@ -288,3 +316,4 @@ services:
 volumes:
   obsidian-headless-state:
   forgejo-db-data:
+  forge-backup-dump:

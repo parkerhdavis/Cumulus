@@ -189,6 +189,13 @@ else ifeq ($(HOST_NAME),phd-tower)
 	@echo "     (chown -R 1000:1000 <path>; the forgejo container refuses to start otherwise)"
 	@echo "  2. Run 'make up phd-tower' to start services"
 	@echo ""
+	@echo "Building the forge-backup image (restic + pg client + crond)..."
+	@docker build -q -t cumulus/forge-backup:latest -f restic/Dockerfile restic/ >/dev/null && \
+		echo "  built cumulus/forge-backup:latest"
+	@echo "Backups are stubbed DORMANT: the service sits behind the 'backups' compose"
+	@echo "profile and stays out of 'make up'. To plug in later: fill BACKUP_* in"
+	@echo ".env, restic init, then --profile backups up -d backup (Backup Design doc)."
+	@echo ""
 else ifeq ($(HOST_NAME),phd-razer)
 	@echo "Nothing to render for phd-razer — config comes entirely from .env"
 	@echo ""

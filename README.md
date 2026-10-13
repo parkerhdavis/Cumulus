@@ -36,6 +36,7 @@ The stack is split across four hosts, each with its own compose file:
 |---------|-------------|
 | **Pangolin CLI (site / client)** | The two-role agent pair (`pangolin-site` + `pangolin-client`), same auth split as phd-beelink |
 | **[Forgejo](https://forgejo.org)** | Self-hosted git forge with Git LFS at `forge.${BASE_DOMAIN}` — web UI and git-over-HTTPS through a Pangolin HTTP resource, git-over-SSH through a raw TCP resource on port 2222 |
+| **forge-backup** | Stubbed: monthly restic backup of ForgeData, home, and the forge DB dump to a DigitalOcean Spaces cold bucket — dormant behind the `backups` compose profile until plugged in |
 | **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all nine vaults (one container per vault) |
 
 **phd-razer** (workstation) runs Pangolin site and client agents plus the same headless vault sync:
