@@ -1,0 +1,2 @@
+# Monthly: 3 AM on the 1st — matches the cold bucket's billing cadence.
+0 3 1 * * /backup.sh >> /backup.log 2>&1
