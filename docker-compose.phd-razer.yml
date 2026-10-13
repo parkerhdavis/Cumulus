@@ -1,7 +1,7 @@
-# phd-razer — Pangolin site agent (newt) + headless Obsidian Sync.
+# phd-razer — Pangolin site agent + headless Obsidian Sync.
 #
-# fosrl/newt dials out to the Pangolin endpoint; its credentials are the
-# site's ID/secret pair from the Pangolin dashboard (RAZER_SITE_*). No
+# fosrl/pangolin-cli dials out to the Pangolin endpoint; its credentials are
+# the site's ID/secret pair from the Pangolin dashboard (RAZER_SITE_*). No
 # published ports — nothing to expose on the router.
 
 # Headless Obsidian Sync (https://obsidian.md/help/sync/headless) — one
@@ -36,17 +36,17 @@ x-obsidian-sync: &obsidian-sync
   restart: unless-stopped
 
 services:
-  newt:
-    image: fosrl/newt
-    container_name: newt
+  pangolin-cli:
+    image: fosrl/pangolin-cli
+    container_name: pangolin-site
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
     network_mode: host
     environment:
       - PANGOLIN_ENDPOINT=https://pangolin.${BASE_DOMAIN}
-      - NEWT_ID=${RAZER_SITE_ID}
-      - NEWT_SECRET=${RAZER_SITE_SECRET}
+      - SITE_ID=${RAZER_SITE_ID}
+      - SITE_SECRET=${RAZER_SITE_SECRET}
 
   obsidian-anthers-wiki:
     <<: *obsidian-sync

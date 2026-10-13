@@ -42,9 +42,9 @@ help:
 	@echo ""
 	@echo "Hosts:"
 	@echo "  droplet              # DigitalOcean droplet (pangolin, gerbil, traefik)"
-	@echo "  phd-beelink          # Home server (newt, jellyfin, immich, ...)"
+	@echo "  phd-beelink          # Home server (site agent, jellyfin, immich, ...)"
 	@echo "  phd-tower          # Tower PC (pangolin site agent, forgejo)"
-	@echo "  phd-razer            # Razer workstation (newt)"
+	@echo "  phd-razer            # Razer workstation (site agent)"
 	@echo ""
 	@echo "Running:"
 	@echo "  up <host>            # Start services"
@@ -68,7 +68,7 @@ help:
 	@echo ""
 	@echo "Examples:"
 	@echo "  make up droplet      # Start Pangolin services on droplet"
-	@echo "  make logs phd-beelink # View Newt logs on home server"
+	@echo "  make logs phd-beelink # View site agent logs on home server"
 	@echo ""
 
 # ==================================================================
