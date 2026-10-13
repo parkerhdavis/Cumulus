@@ -37,12 +37,14 @@ x-obsidian-sync: &obsidian-sync
   restart: unless-stopped
 
 services:
-  pangolin-cli:
+  pangolin-site:
     image: fosrl/pangolin-cli
     container_name: pangolin-site
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
     network_mode: host
     environment:
       - PANGOLIN_ENDPOINT=https://pangolin.${BASE_DOMAIN}
@@ -58,10 +60,25 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     network_mode: host
-    environment:
-      - PANGOLIN_ENDPOINT=https://pangolin.${BASE_DOMAIN}
-      - CLIENT_ID=${BEELINK_CLIENT_ID}
-      - CLIENT_SECRET=${BEELINK_CLIENT_SECRET}
+    volumes:
+      - ./pangolin-client-config:/root/.config/pangolin
+      - /etc/hosts:/host-etc/hosts
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - |
+        H=/host-etc/hosts
+        awk '/# BEGIN pangolin-client/{s=1;next} /# END pangolin-client/{s=0;next} !s' "$$H" > /tmp/hosts.new
+        cat >> /tmp/hosts.new <<'EOF'
+        # BEGIN pangolin-client
+        100.96.128.8 phd-beelink.internal
+        100.96.128.9 phd-tower.internal
+        100.96.128.10 phd-razer.internal
+        # END pangolin-client
+        EOF
+        cat /tmp/hosts.new > "$$H"
+        exec /usr/local/bin/pangolin-cli up --attach
 
   jellyfin:
     image: jellyfin/jellyfin
