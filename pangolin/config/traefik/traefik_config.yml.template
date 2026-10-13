@@ -51,8 +51,8 @@ certificatesResolvers:
       caServer: "https://acme-v02.api.letsencrypt.org/directory"
 
 entryPoints:
-  tcp-1666:
-    address: ":1666/tcp"
+  tcp-2222:
+    address: ":2222/tcp"
   web:
     address: ":80"
   websecure:

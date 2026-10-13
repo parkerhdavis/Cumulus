@@ -34,6 +34,7 @@ services:
       - 21820:21820/udp
       - 443:443
       - 80:80
+      - 2222:2222/tcp # forgejo ssh (raw tcp resource; entrypoint tcp-2222 in traefik static config)
 
   traefik:
     image: docker.io/traefik:v3.6
