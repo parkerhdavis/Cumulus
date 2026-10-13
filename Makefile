@@ -43,7 +43,7 @@ help:
 	@echo "Hosts:"
 	@echo "  droplet              # DigitalOcean droplet (pangolin, gerbil, traefik)"
 	@echo "  phd-beelink          # Home server (newt, jellyfin, immich, ...)"
-	@echo "  phd-tower            # Tower PC (pangolin site agent)"
+	@echo "  phd-tower          # Tower PC (pangolin site agent, forgejo)"
 	@echo "  phd-razer            # Razer workstation (newt)"
 	@echo ""
 	@echo "Running:"
@@ -167,6 +167,27 @@ else ifeq ($(HOST_NAME),phd-beelink)
 		echo "  rendered ofelia/config.ini"
 	@echo ""
 	@echo "Next step: Run 'make up phd-beelink' to start services"
+	@echo ""
+else ifeq ($(HOST_NAME),phd-tower)
+	@set -a && . ./.env && set +a && \
+		if [ -z "$$FORGEJO_DATA_PATH" ] || [ "$$FORGEJO_DATA_PATH" = "changeme" ]; then \
+			echo "Error: FORGEJO_DATA_PATH is not set in .env"; \
+			exit 1; \
+		fi && \
+		if [ -z "$$FORGEJO_DB_PASSWORD" ] || [ "$$FORGEJO_DB_PASSWORD" = "changeme" ] || \
+		   [ -z "$$FORGEJO_SECRET_KEY" ] || [ "$$FORGEJO_SECRET_KEY" = "changeme" ] || \
+		   [ -z "$$FORGEJO_INTERNAL_TOKEN" ] || [ "$$FORGEJO_INTERNAL_TOKEN" = "changeme" ] || \
+		   [ -z "$$FORGEJO_LFS_JWT_SECRET" ] || [ "$$FORGEJO_LFS_JWT_SECRET" = "changeme" ]; then \
+			echo "Error: FORGEJO_DB_PASSWORD, FORGEJO_SECRET_KEY, FORGEJO_INTERNAL_TOKEN and FORGEJO_LFS_JWT_SECRET must all be generated values in .env (see .env.example)"; \
+			exit 1; \
+		fi && \
+		mkdir -p "$$FORGEJO_DATA_PATH" && \
+		echo "Forgejo data directory ready at $$FORGEJO_DATA_PATH"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. Make sure the Forgejo data directory is owned by uid/gid 1000"
+	@echo "     (chown -R 1000:1000 <path>; the forgejo container refuses to start otherwise)"
+	@echo "  2. Run 'make up phd-tower' to start services"
 	@echo ""
 else ifeq ($(HOST_NAME),phd-razer)
 	@echo "Nothing to render for phd-razer — config comes entirely from .env"

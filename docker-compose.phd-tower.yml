@@ -1,4 +1,4 @@
-# phd-tower — Pangolin site agent + headless Obsidian Sync.
+# phd-tower — Pangolin site agent, Forgejo forge, and headless Obsidian Sync.
 #
 # fosrl/pangolin-cli is the newer site agent alongside fosrl/newt: it connects
 # back to the Pangolin endpoint and its credentials are issued as a site's
@@ -39,6 +39,37 @@ x-obsidian-sync: &obsidian-sync
   image: cumulus/obsidian-sync:latest
   restart: unless-stopped
 
+# forgejo — self-hosted git forge (https://forgejo.org), filling the VCS-hosting
+# hole the Perforce Helix Core removal (#35) left in the stack. Design details
+# and decisions live in the Forgejo Forge Plan in the Software-Wiki (50 Cumulus,
+# 90-99 Agents/Transient). Configuration is entirely via FORGEJO__* env vars so
+# a fresh deploy reproduces from this repo plus .env: INSTALL_LOCK makes the
+# first boot run migrations headlessly with no web wizard, and
+# DISABLE_REGISTRATION closes public sign-up before the forge ever serves a
+# request (the admin account is created through the container CLI once).
+#
+# Git LFS is on (LFS_START_SERVER) and rides the same HTTPS endpoint as the UI;
+# its JWT secret comes from .env. Repositories and LFS live on the
+# FORGEJO_DATA_PATH bind mount, so that one directory plus the forgejo-db-data
+# volume are the entire backup unit.
+#
+# Reach: the web UI is published on loopback (127.0.0.1:3000) and exposed
+# through Pangolin as an HTTP resource at forge.${BASE_DOMAIN}; the built-in
+# SSH server is published on loopback (127.0.0.1:2222) and exposed through
+# Pangolin as a raw TCP resource on the same port — the pattern the p4 passthrough
+# used. Trusted-proxy headers work with Forgejo's defaults because the tunnel
+# arrives on loopback; real client IPs come from Traefik's X-Forwarded-For chain.
+# The image tag is pinned to the major (16) — Forgejo major upgrades need
+# manual verification, while `make pull phd-tower` still picks up patches.
+x-forgejo-db-env: &forgejo-db-env
+  POSTGRES_USER: forgejo
+  POSTGRES_PASSWORD: ${FORGEJO_DB_PASSWORD}
+  POSTGRES_DB: forgejo
+
+networks:
+  forgejo:
+    external: false
+
 services:
   pangolin-site:
     image: fosrl/pangolin-cli
@@ -51,6 +82,58 @@ services:
       - PANGOLIN_ENDPOINT=https://pangolin.${BASE_DOMAIN}
       - SITE_ID=${TOWER_SITE_ID}
       - SITE_SECRET=${TOWER_SITE_SECRET}
+
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:16
+    container_name: forgejo
+    restart: unless-stopped
+    networks:
+      - forgejo
+    depends_on:
+      - forgejo-db
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      # --- server ---
+      - FORGEJO__server__DOMAIN=forge.${BASE_DOMAIN}
+      - FORGEJO__server__ROOT_URL=https://forge.${BASE_DOMAIN}/
+      - FORGEJO__server__SSH_DOMAIN=forge.${BASE_DOMAIN}
+      - FORGEJO__server__SSH_PORT=2222
+      - FORGEJO__server__LFS_START_SERVER=true
+      - FORGEJO__server__LFS_JWT_SECRET=${FORGEJO_LFS_JWT_SECRET}
+      # --- database ---
+      - FORGEJO__database__DB_TYPE=postgres
+      - FORGEJO__database__HOST=forgejo-db:5432
+      - FORGEJO__database__NAME=forgejo
+      - FORGEJO__database__USER=forgejo
+      - FORGEJO__database__PASSWD=${FORGEJO_DB_PASSWORD}
+      # --- security / service ---
+      - FORGEJO__security__INSTALL_LOCK=true
+      - FORGEJO__security__SECRET_KEY=${FORGEJO_SECRET_KEY}
+      - FORGEJO__security__INTERNAL_TOKEN=${FORGEJO_INTERNAL_TOKEN}
+      - FORGEJO__service__DISABLE_REGISTRATION=true
+    volumes:
+      - ${FORGEJO_DATA_PATH}:/data
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:2222:22"
+
+  forgejo-db:
+    image: postgres:16-alpine
+    container_name: forgejo-db
+    restart: unless-stopped
+    networks:
+      - forgejo
+    environment:
+      <<: *forgejo-db-env
+    volumes:
+      - forgejo-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U forgejo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   obsidian-anthers-wiki:
     <<: *obsidian-sync
@@ -164,3 +247,4 @@ services:
 
 volumes:
   obsidian-headless-state:
+  forgejo-db-data:
