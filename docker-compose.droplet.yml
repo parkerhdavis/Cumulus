@@ -1,6 +1,6 @@
 services:
   pangolin:
-    image: docker.io/fosrl/pangolin:latest # https://github.com/fosrl/pangolin/releases
+    image: docker.io/fosrl/pangolin:ee-latest # Enterprise Edition, SQLite (https://docs.pangolin.net/self-host/enterprise-edition/activate)
     container_name: pangolin
     restart: unless-stopped
     volumes:
