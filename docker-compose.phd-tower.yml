@@ -146,7 +146,14 @@ services:
       - FORGEJO__security__INTERNAL_TOKEN=${FORGEJO_INTERNAL_TOKEN}
       - FORGEJO__service__DISABLE_REGISTRATION=true
     volumes:
-      - ${FORGEJO_DATA_PATH}:/data
+      # Long bind syntax: any value here is treated as a path, so a placeholder
+      # or unset variable degrades to a wrong-dir mount instead of the whole
+      # compose project failing to parse (which bricks every make command on
+      # the host — a short-syntax `${VAR}:/data` with a bare word is read as a
+      # named volume reference and refused).
+      - type: bind
+        source: ${FORGEJO_DATA_PATH}
+        target: /data
       - /etc/localtime:/etc/localtime:ro
     ports:
       - "127.0.0.1:3000:3000"
