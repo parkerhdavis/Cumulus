@@ -19,7 +19,8 @@ The stack is split across four hosts, each with its own compose file:
 
 | Service | Description |
 |---------|-------------|
-| **[Newt](https://github.com/fosrl/newt)** | Tunnel agent that connects back to Pangolin |
+| **[Pangolin CLI (site)](https://github.com/fosrl/cli)** | Inbound tunnel agent (`pangolin-site` container), authenticated with the site's ID/secret from `.env` |
+| **[Pangolin CLI (client)](https://github.com/fosrl/cli)** | Outbound tunnel agent (`pangolin-client` container), authenticated by a one-time interactive `pangolin login` persisted in `pangolin-client-config/`; also maintains the host's `.internal` entries in `/etc/hosts` |
 | **[Jellyfin](https://github.com/jellyfin/jellyfin)** | Media server for movies, TV, music |
 | **[Immich](https://github.com/immich-app/immich)** | Self-hosted photo & video management |
 | **Immich ML** | Machine learning sidecar for face/object recognition |
@@ -29,19 +30,19 @@ The stack is split across four hosts, each with its own compose file:
 | **[Gokapi](https://github.com/Forceu/Gokapi)** | Lightweight file-drop / sharing service (Firefox Send alternative) |
 | **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all ten vaults (one container per vault) |
 
-**phd-tower** (tower PC) runs a Pangolin site agent, the Forgejo forge, and the same headless vault sync:
+**phd-tower** (tower PC) runs Pangolin site and client agents, the Forgejo forge, and the same headless vault sync:
 
 | Service | Description |
 |---------|-------------|
-| **Newt** | Pangolin site agent (`fosrl/pangolin-cli`) connecting the tower to Pangolin |
+| **Pangolin CLI (site / client)** | The two-role agent pair (`pangolin-site` + `pangolin-client`), same auth split as phd-beelink |
 | **[Forgejo](https://forgejo.org)** | Self-hosted git forge with Git LFS at `forge.${BASE_DOMAIN}` — web UI and git-over-HTTPS through a Pangolin HTTP resource, git-over-SSH through a raw TCP resource on port 2222 |
 | **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all ten vaults (one container per vault) |
 
-**phd-razer** (workstation) runs a Newt site agent plus the same headless vault sync:
+**phd-razer** (workstation) runs Pangolin site and client agents plus the same headless vault sync:
 
 | Service | Description |
 |---------|-------------|
-| **Newt** | Tunnel agent connecting the workstation to Pangolin |
+| **Pangolin CLI (site / client)** | The two-role agent pair (`pangolin-site` + `pangolin-client`), same auth split as phd-beelink |
 | **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all ten vaults (one container per vault) |
 
 ### How it all fits together
