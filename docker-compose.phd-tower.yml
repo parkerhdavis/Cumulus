@@ -71,6 +71,11 @@ x-forgejo-db-env: &forgejo-db-env
 networks:
   forgejo:
     external: false
+    # Pinned so REVERSE_PROXY_TRUSTED_PROXIES below stays correct across
+    # recreations — Docker numbers new networks from the free pool otherwise.
+    ipam:
+      config:
+        - subnet: 172.30.240.0/24
 
 services:
   pangolin-site:
@@ -144,6 +149,10 @@ services:
       - FORGEJO__security__INSTALL_LOCK=true
       - FORGEJO__security__SECRET_KEY=${FORGEJO_SECRET_KEY}
       - FORGEJO__security__INTERNAL_TOKEN=${FORGEJO_INTERNAL_TOKEN}
+      # The published-port chain rewrites the connection source to the compose
+      # network gateway, which must be trusted for the X-Forwarded-For chain
+      # (set at the droplet's Traefik edge) to surface real client IPs.
+      - FORGEJO__security__REVERSE_PROXY_TRUSTED_PROXIES=172.30.240.0/24,127.0.0.0/8,::1/128
       - FORGEJO__service__DISABLE_REGISTRATION=true
     volumes:
       # Long bind syntax: any value here is treated as a path, so a placeholder
