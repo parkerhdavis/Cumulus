@@ -48,6 +48,20 @@ services:
       - SITE_ID=${RAZER_SITE_ID}
       - SITE_SECRET=${RAZER_SITE_SECRET}
 
+  pangolin-client:
+    image: fosrl/pangolin-cli
+    container_name: pangolin-client
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    network_mode: host
+    environment:
+      - PANGOLIN_ENDPOINT=https://pangolin.${BASE_DOMAIN}
+      - CLIENT_ID=${RAZER_CLIENT_ID}
+      - CLIENT_SECRET=${RAZER_CLIENT_SECRET}
+
   obsidian-anthers-wiki:
     <<: *obsidian-sync
     container_name: obsidian-anthers-wiki

@@ -49,6 +49,20 @@ services:
       - SITE_ID=${BEELINK_SITE_ID}
       - SITE_SECRET=${BEELINK_SITE_SECRET}
 
+  pangolin-client:
+    image: fosrl/pangolin-cli
+    container_name: pangolin-client
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    network_mode: host
+    environment:
+      - PANGOLIN_ENDPOINT=https://pangolin.${BASE_DOMAIN}
+      - CLIENT_ID=${BEELINK_CLIENT_ID}
+      - CLIENT_SECRET=${BEELINK_CLIENT_SECRET}
+
   jellyfin:
     image: jellyfin/jellyfin
     container_name: jellyfin
