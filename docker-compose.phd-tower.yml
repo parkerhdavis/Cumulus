@@ -83,6 +83,20 @@ services:
       - SITE_ID=${TOWER_SITE_ID}
       - SITE_SECRET=${TOWER_SITE_SECRET}
 
+  pangolin-client:
+    image: fosrl/pangolin-cli
+    container_name: pangolin-client
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    network_mode: host
+    environment:
+      - PANGOLIN_ENDPOINT=https://pangolin.${BASE_DOMAIN}
+      - CLIENT_ID=${TOWER_CLIENT_ID}
+      - CLIENT_SECRET=${TOWER_CLIENT_SECRET}
+
   forgejo:
     image: codeberg.org/forgejo/forgejo:16
     container_name: forgejo
