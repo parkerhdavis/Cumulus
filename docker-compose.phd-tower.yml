@@ -272,15 +272,6 @@ services:
       - obsidian-headless-state:/state
       - ${OBSIDIAN_VAULTS_BASE}/Filmmaking/Filmmaking-Wiki:/vaults/Filmmaking-Wiki
 
-  obsidian-phd-wiki:
-    <<: *obsidian-sync
-    container_name: obsidian-phd-wiki
-    environment:
-      <<: *obsidian-env
-      OBSIDIAN_VAULT_NAME: PhD-Wiki
-      OBSIDIAN_DEVICE_NAME: tower-phd-wiki
-    volumes:
-      - obsidian-headless-state:/state
       - ${OBSIDIAN_VAULTS_BASE}/PhD-Wiki:/vaults/PhD-Wiki
 
   obsidian-personal:

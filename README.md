@@ -28,7 +28,7 @@ The stack is split across four hosts, each with its own compose file:
 | **Immich Database** | PostgreSQL with vector extensions for Immich search |
 | **[Open WebUI](https://github.com/open-webui/open-webui)** | LLM chat interface with model management |
 | **[Gokapi](https://github.com/Forceu/Gokapi)** | Lightweight file-drop / sharing service (Firefox Send alternative) |
-| **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all ten vaults (one container per vault) |
+| **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all nine vaults (one container per vault) |
 
 **phd-tower** (tower PC) runs Pangolin site and client agents, the Forgejo forge, and the same headless vault sync:
 
@@ -36,14 +36,14 @@ The stack is split across four hosts, each with its own compose file:
 |---------|-------------|
 | **Pangolin CLI (site / client)** | The two-role agent pair (`pangolin-site` + `pangolin-client`), same auth split as phd-beelink |
 | **[Forgejo](https://forgejo.org)** | Self-hosted git forge with Git LFS at `forge.${BASE_DOMAIN}` — web UI and git-over-HTTPS through a Pangolin HTTP resource, git-over-SSH through a raw TCP resource on port 2222 |
-| **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all ten vaults (one container per vault) |
+| **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all nine vaults (one container per vault) |
 
 **phd-razer** (workstation) runs Pangolin site and client agents plus the same headless vault sync:
 
 | Service | Description |
 |---------|-------------|
 | **Pangolin CLI (site / client)** | The two-role agent pair (`pangolin-site` + `pangolin-client`), same auth split as phd-beelink |
-| **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all ten vaults (one container per vault) |
+| **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all nine vaults (one container per vault) |
 
 ### How it all fits together
 
