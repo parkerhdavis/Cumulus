@@ -87,6 +87,11 @@ services:
       - crowdsec-data:/var/lib/crowdsec/data
       # Authored acquisition configs (tracked in git), overlaying the volume.
       - ./pangolin/config/crowdsec/acquis.d:/etc/crowdsec/acquis.d:ro
+      # Authored override of the hub's http-probing scenario (tracked in git),
+      # overlaying the volume: capacity 10 -> 20 so fj's PR-template sweep
+      # (11-12 quick 404s on every PR command) can't ban the home IP that all
+      # resources and agents share. See the comment in the file itself.
+      - ./pangolin/config/crowdsec/scenarios/http-probing.yaml:/etc/crowdsec/scenarios/http-probing.yaml:ro
       # Traefik's access log, read-only.
       - ./pangolin/config/traefik/logs:/var/log/traefik:ro
     healthcheck:
