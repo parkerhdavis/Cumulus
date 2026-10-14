@@ -67,24 +67,25 @@ services:
       # Disable the volumetric 403/404 scenarios. They infer "attack" purely
       # from response count against a single IP, which structurally misfires on
       # this edge: every legitimate request — browsers, the fleet agents, and
-      # every CLI an agent session runs — egresses one home IP.
-      # - crowdsecurity/http-generic-bf: its 403/404 counting self-reinforced
-      #   into a ban loop (ban -> bouncer 403s in the access log -> re-ban
-      #   every ~60s), and apps that legitimately 403 (immich's
-      #   unauthenticated API calls) fed it too. Note this is the HUB ITEM
-      #   name (`cscli scenarios list`), NOT the scenario name that appears in
-      #   alerts: one hub item defines LePresidente/http-generic-403-bf and
-      #   .../http-generic-404-bf, so disabling it kills both.
-      # - crowdsecurity/http-probing: banned the home IP twice on 2026-10-14,
+      # every CLI an agent session runs — egresses one home IP, and the
+      # bouncer's own 403 ban responses feed the same count. Volumetric attacks
+      # are still caught by AppSec (virtual-patching/generic-rules) and the
+      # targeted crowdsecurity/traefik scenarios (sqli, traversal, etc.).
+      # - crowdsecurity/http-generic-bf self-reinforced into a ban loop
+      #   (ban -> bouncer 403s -> re-ban every ~60s), and apps that
+      #   legitimately 403 (immich's unauthenticated API calls) fed it too.
+      #   NB: this is the HUB ITEM name (`cscli scenarios list`), NOT the
+      #   scenario name that appears in alerts — one hub item defines both
+      #   LePresidente/http-generic-403-bf and .../http-generic-404-bf, so
+      #   disabling it kills both.
+      # - crowdsecurity/http-probing banned the home IP twice on 2026-10-14,
       #   first for 11 then for 21 legitimate 404s — fj (forgejo-cli) probes
-      #   every PR-template path variant per PR command and Forgejo 404s each
-      #   miss. Raising the capacity is whack-a-mole while sweeps grow; the
-      #   targeted probing scenarios (admin-interface, CVE, sqli, traversal,
-      #   w00tw00t) and AppSec still catch real attacks.
-      # Real volumetric attacks are still caught by AppSec
-      # (virtual-patching/generic-rules) and the targeted crowdsecurity/traefik
-      # scenarios (sqli, traversal, etc.).
-      - DISABLE_SCENARIOS=crowdsecurity/http-generic-bf,crowdsecurity/http-probing
+      #   every PR-template path variant per PR command, and Forgejo 404s
+      #   each miss. Raising the capacity is whack-a-mole while sweeps grow.
+      # NB: SPACE separator — the image's docker_start.sh word-splits these
+      # lists, and a comma becomes one bogus item name whose cscli failure
+      # exits the container into a crash loop (bit us 2026-10-14).
+      - DISABLE_SCENARIOS=crowdsecurity/http-generic-bf crowdsecurity/http-probing
       # Idempotently registers a bouncer named "traefik" with this key at startup.
       # The Traefik plugin authenticates to LAPI with the same value
       # (crowdsecLapiKey in dynamic_config). Single source of truth: .env.
