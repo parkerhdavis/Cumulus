@@ -56,8 +56,6 @@ On the Server:
 
 Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-beelink`).
 
-The nine Obsidian vault folders under the host homes are synced by a system-level Syncthing on each host, outside this stack — they are deliberately not a compose concern.
-
 
 ## Quick Start
 
