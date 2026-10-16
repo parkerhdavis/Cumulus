@@ -18,13 +18,14 @@
 #
 # Caution: per Obsidian's docs, run only ONE sync method per device — if the
 # desktop Obsidian app on this machine also syncs a vault that a container
-# here syncs, disable the desktop Sync plugin for it. The org wikis all live
-# in identically-named folders (~/<Org>/-wiki), so disambiguation happens at
-# the mount: the bind source carries the bare folder name, while the bind
-# target (/vaults/OBSIDIAN_VAULT_NAME) and OBSIDIAN_VAULT_NAME itself keep
-# the unique vault label — the remote vault it links to, keyed by that label
-# in the shared state volume. A remote labeled exactly with a folder name
-# would cross-link one vault's folder to another's remote.
+# here syncs, disable the desktop Sync plugin for it. The host folders are
+# uniquely named (~/<Org>/wiki-<org>), but the remote vault labels are still
+# the legacy ones (Anthers-Wiki, Software-Wiki, …), so the bind target and
+# OBSIDIAN_VAULT_NAME keep the label while the bind source carries the
+# folder name. Renaming a service's VAULT_NAME before its remote is renamed
+# would create a new, empty remote vault under the new name and pull a full
+# merge into it — rename remotes first (tracked task), then the two can re-
+# couple to the folder names.
 x-obsidian-env: &obsidian-env
   OBSIDIAN_EMAIL: ${OBSIDIAN_EMAIL}
   OBSIDIAN_PASSWORD: ${OBSIDIAN_PASSWORD}
@@ -91,7 +92,7 @@ services:
       OBSIDIAN_DEVICE_NAME: razer-anthers-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Anthers/-wiki:/vaults/Anthers-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Anthers/wiki-anthers:/vaults/Anthers-Wiki
 
   obsidian-carelaw-wiki:
     <<: *obsidian-sync
@@ -102,7 +103,7 @@ services:
       OBSIDIAN_DEVICE_NAME: razer-carelaw-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Carelaw/-wiki:/vaults/Carelaw-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Carelaw/wiki-carelaw:/vaults/Carelaw-Wiki
 
   obsidian-customchannels-wiki:
     <<: *obsidian-sync
@@ -113,7 +114,7 @@ services:
       OBSIDIAN_DEVICE_NAME: razer-customchannels-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/CustomChannels/-wiki:/vaults/CustomChannels-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/CustomChannels/wiki-customchannels:/vaults/CustomChannels-Wiki
 
   obsidian-polysemy-wiki:
     <<: *obsidian-sync
@@ -124,7 +125,7 @@ services:
       OBSIDIAN_DEVICE_NAME: razer-polysemy-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Polysemy/-wiki:/vaults/Polysemy-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Polysemy/wiki-polysemy:/vaults/Polysemy-Wiki
 
   obsidian-gamedev-wiki:
     <<: *obsidian-sync
@@ -135,7 +136,7 @@ services:
       OBSIDIAN_DEVICE_NAME: razer-gamedev-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Games/-wiki:/vaults/GameDev-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Games/wiki-games:/vaults/GameDev-Wiki
 
   obsidian-software-wiki:
     <<: *obsidian-sync
@@ -146,7 +147,7 @@ services:
       OBSIDIAN_DEVICE_NAME: razer-software-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Software/-wiki:/vaults/Software-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Software/wiki-software:/vaults/Software-Wiki
 
   obsidian-musicmaking-wiki:
     <<: *obsidian-sync
@@ -157,7 +158,7 @@ services:
       OBSIDIAN_DEVICE_NAME: razer-musicmaking-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Musics/-wiki:/vaults/Musicmaking-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Musics/wiki-music:/vaults/Musicmaking-Wiki
 
   obsidian-filmmaking-wiki:
     <<: *obsidian-sync
@@ -168,7 +169,7 @@ services:
       OBSIDIAN_DEVICE_NAME: razer-filmmaking-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Films/-wiki:/vaults/Filmmaking-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Films/wiki-films:/vaults/Filmmaking-Wiki
 
   obsidian-personal:
     <<: *obsidian-sync
