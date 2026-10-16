@@ -64,12 +64,17 @@ fix_owner "${VAULT_PATH}"
 
 # The "already logged in" probe hits the network, so transient failures (e.g.
 # ten containers probing the API at the same instant on recreate) must not be
-# mistaken for a missing session. Retry before concluding anything.
+# mistaken for a missing session. Retry with growing sleeps before concluding
+# anything — a fast loop here helped trip Obsidian's per-account rate limiter
+# on 2026-10-16 (all nine containers logged in simultaneously after a state
+# volume reset, and the account spent the night "Please wait a moment").
 LOGGED_IN=no
+probe_sleep=15
 for _ in 1 2 3; do
 	probe_out=$(run ob sync-list-remote 2>&1) && { LOGGED_IN=yes; break; }
 	case "$probe_out" in *"No account logged in"*) break ;; esac
-	sleep 5
+	sleep $probe_sleep
+	probe_sleep=$((probe_sleep * 2))
 done
 
 if [ "${LOGGED_IN}" != "yes" ]; then
@@ -79,12 +84,28 @@ if [ "${LOGGED_IN}" != "yes" ]; then
 		echo "[obsidian-sync]   docker compose -f <compose-file> run --rm --entrypoint sh ${OBSIDIAN_VAULT_NAME}" >&2
 		exit 1
 	fi
-	echo "[obsidian-sync] logging in..."
-	if ! run ob login --email "${OBSIDIAN_EMAIL}" --password "${OBSIDIAN_PASSWORD}"; then
-		echo "[obsidian-sync] login failed — if the account uses 2FA, log in interactively once:" >&2
+	# Jitter the start so a fleet-wide state reset doesn't fire every
+	# container's first login at the same instant (PID-based; $RANDOM is
+	# not available in dash).
+	echo "[obsidian-sync] no session yet — staggering login by up to 45s"
+	sleep $(( $$ % 45 ))
+	login_sleep=30
+	for _ in 1 2 3 4 5; do
+		echo "[obsidian-sync] logging in..."
+		if run ob login --email "${OBSIDIAN_EMAIL}" --password "${OBSIDIAN_PASSWORD}"; then
+			break
+		fi
+		echo "[obsidian-sync] login attempt failed — retrying in ${login_sleep}s" >&2
+		sleep $login_sleep
+		login_sleep=$((login_sleep * 2))
+		[ $login_sleep -gt 300 ] && login_sleep=300
+	done
+	run ob sync-list-remote >/dev/null 2>&1 || {
+		echo "[obsidian-sync] login did not hold after retries" >&2
+		echo "[obsidian-sync] if the account uses 2FA, log in interactively once:" >&2
 		echo "[obsidian-sync]   docker compose -f <compose-file> run --rm --entrypoint sh ${OBSIDIAN_VAULT_NAME}" >&2
 		exit 1
-	fi
+	}
 fi
 
 # --- helpers: parse ob's --json output with node (POSIX sh has no jq) ------
