@@ -24,10 +24,13 @@
 #
 # Caution: per Obsidian's docs, run only ONE sync method per device — if the
 # desktop Obsidian app on this machine also syncs a vault that a container
-# here syncs, disable the desktop Sync plugin for it. Each container links to
-# the remote vault labeled exactly with its vault's folder name, creating one
-# under that name when none exists, so the remote label and the vault name
-# are always the same.
+# here syncs, disable the desktop Sync plugin for it. The org wikis all live
+# in identically-named folders (~/<Org>/-wiki), so disambiguation happens at
+# the mount: the bind source carries the bare folder name, while the bind
+# target (/vaults/OBSIDIAN_VAULT_NAME) and OBSIDIAN_VAULT_NAME itself keep
+# the unique vault label — the remote vault it links to, keyed by that label
+# in the shared state volume. A remote labeled exactly with a folder name
+# would cross-link one vault's folder to another's remote.
 x-obsidian-env: &obsidian-env
   OBSIDIAN_EMAIL: ${OBSIDIAN_EMAIL}
   OBSIDIAN_PASSWORD: ${OBSIDIAN_PASSWORD}
@@ -222,7 +225,7 @@ services:
       OBSIDIAN_DEVICE_NAME: tower-anthers-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Anthers/Anthers-Wiki:/vaults/Anthers-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Anthers/-wiki:/vaults/Anthers-Wiki
 
   obsidian-carelaw-wiki:
     <<: *obsidian-sync
@@ -233,7 +236,7 @@ services:
       OBSIDIAN_DEVICE_NAME: tower-carelaw-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Carelaw/Carelaw-Wiki:/vaults/Carelaw-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Carelaw/-wiki:/vaults/Carelaw-Wiki
 
   obsidian-customchannels-wiki:
     <<: *obsidian-sync
@@ -244,7 +247,7 @@ services:
       OBSIDIAN_DEVICE_NAME: tower-customchannels-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/CustomChannels/CustomChannels-Wiki:/vaults/CustomChannels-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/CustomChannels/-wiki:/vaults/CustomChannels-Wiki
 
   obsidian-polysemy-wiki:
     <<: *obsidian-sync
@@ -255,7 +258,7 @@ services:
       OBSIDIAN_DEVICE_NAME: tower-polysemy-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Polysemy/Polysemy-Wiki:/vaults/Polysemy-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Polysemy/-wiki:/vaults/Polysemy-Wiki
 
   obsidian-gamedev-wiki:
     <<: *obsidian-sync
@@ -266,7 +269,7 @@ services:
       OBSIDIAN_DEVICE_NAME: tower-gamedev-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/GameDev/GameDev-Wiki:/vaults/GameDev-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Games/-wiki:/vaults/GameDev-Wiki
 
   obsidian-software-wiki:
     <<: *obsidian-sync
@@ -277,7 +280,7 @@ services:
       OBSIDIAN_DEVICE_NAME: tower-software-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Software/Software-Wiki:/vaults/Software-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Software/-wiki:/vaults/Software-Wiki
 
   obsidian-musicmaking-wiki:
     <<: *obsidian-sync
@@ -288,7 +291,7 @@ services:
       OBSIDIAN_DEVICE_NAME: tower-musicmaking-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Musicmaking/Musicmaking-Wiki:/vaults/Musicmaking-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Musics/-wiki:/vaults/Musicmaking-Wiki
 
   obsidian-filmmaking-wiki:
     <<: *obsidian-sync
@@ -299,9 +302,7 @@ services:
       OBSIDIAN_DEVICE_NAME: tower-filmmaking-wiki
     volumes:
       - obsidian-headless-state:/state
-      - ${OBSIDIAN_VAULTS_BASE}/Filmmaking/Filmmaking-Wiki:/vaults/Filmmaking-Wiki
-
-      - ${OBSIDIAN_VAULTS_BASE}/PhD-Wiki:/vaults/PhD-Wiki
+      - ${OBSIDIAN_VAULTS_BASE}/Films/-wiki:/vaults/Filmmaking-Wiki
 
   obsidian-personal:
     <<: *obsidian-sync
