@@ -226,3 +226,10 @@ sync:
 
 
 .DEFAULT_GOAL := help
+
+check-secrets:
+	scripts/check-secrets.sh
+
+hooks:
+	install -m 755 scripts/hooks/pre-push .git/hooks/pre-push
+	@echo "pre-push secret gate installed"
