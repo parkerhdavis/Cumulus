@@ -1,0 +1,27 @@
+#!/bin/sh
+# pre-push secret gate — checks every commit this push would add.
+# Union of new commits across all local refs on stdin; a delete (local_oid
+# all zeros) pushes nothing and is skipped. Delegates to scripts/check-secrets.sh
+# (repo working tree), which exits and logs via stdout; its exit code passes through.
+set -u
+
+seen=' '
+commits=''
+while read -r _ _ local_oid _; do
+	case "$local_oid" in
+		'' | 0000000000000000000000000000000000000000) continue ;;
+	esac
+	case "$seen" in
+		*" $local_oid "*) continue ;;
+	esac
+	seen="$seen$local_oid "
+	commits="$commits $(git rev-list "$local_oid" --not --remotes)"
+done
+
+if [ -z "$commits" ]; then
+	# Nothing new anywhere (e.g. tag or delete push) — still run the default
+	# sweep so a stale working tree can't ride along unnoticed.
+	exec scripts/check-secrets.sh
+fi
+
+exec scripts/check-secrets.sh $commits
