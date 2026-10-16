@@ -28,23 +28,20 @@ The stack is split across four hosts, each with its own compose file:
 | **Immich Database** | PostgreSQL with vector extensions for Immich search |
 | **[Open WebUI](https://github.com/open-webui/open-webui)** | LLM chat interface with model management |
 | **[Gokapi](https://github.com/Forceu/Gokapi)** | Lightweight file-drop / sharing service (Firefox Send alternative) |
-| **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all nine vaults (one container per vault) |
 
-**phd-tower** (tower PC) runs Pangolin site and client agents, the Forgejo forge, and the same headless vault sync:
+**phd-tower** (tower PC) runs Pangolin site and client agents and the Forgejo forge:
 
 | Service | Description |
 |---------|-------------|
 | **Pangolin CLI (site / client)** | The two-role agent pair (`pangolin-site` + `pangolin-client`), same auth split as phd-beelink |
 | **[Forgejo](https://forgejo.org)** | Self-hosted git forge with Git LFS at `forge.${BASE_DOMAIN}` — web UI and git-over-HTTPS through a Pangolin HTTP resource, git-over-SSH through a raw TCP resource on port 2222 |
 | **forge-backup** | Stubbed: monthly restic backup of ForgeData, home, and the forge DB dump to a DigitalOcean Spaces cold bucket — dormant behind the `backups` compose profile until plugged in |
-| **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all nine vaults (one container per vault) |
 
-**phd-razer** (workstation) runs Pangolin site and client agents plus the same headless vault sync:
+**phd-razer** (workstation) runs the Pangolin site and client agents:
 
 | Service | Description |
 |---------|-------------|
 | **Pangolin CLI (site / client)** | The two-role agent pair (`pangolin-site` + `pangolin-client`), same auth split as phd-beelink |
-| **[Obsidian Sync](https://obsidian.md/help/sync/headless)** | Headless, continuous sync for all nine vaults (one container per vault) |
 
 ### How it all fits together
 
@@ -59,17 +56,8 @@ On the Server:
 
 Each host is managed independently via the Makefile (e.g. `make up droplet`, `make logs phd-beelink`).
 
-### Headless Obsidian Sync
+The nine Obsidian vault folders under the host homes are synced by a system-level Syncthing on each host, outside this stack — they are deliberately not a compose concern.
 
-All three phd-* hosts run [Obsidian Headless](https://obsidian.md/help/sync/headless), the official command-line client for [Obsidian Sync](https://obsidian.md/sync), so vault folders stay current whether or not Obsidian itself is running on that machine. The client has no official Docker image, so `obsidian-sync/` builds one onto `node:22-slim` from the pinned npm package. Each vault gets its own container: on startup it logs in with `OBSIDIAN_EMAIL` and `OBSIDIAN_PASSWORD` from `.env`, creates its remote vault when it doesn't exist yet (end-to-end encrypted with `OBSIDIAN_E2EE_PASSWORD`), links the local folder to it as device `<host>-<vault>`, and then runs `ob sync --continuous` so file changes propagate in both directions within seconds.
-
-The login token and per-vault setup state persist in the shared `obsidian-headless-state` volume, so a recreated container skips setup entirely and resumes watching right away. Containers start as root only to repair ownership and immediately drop to the sync user via gosu (Docker auto-creates missing vault directories as root, which would otherwise lock the sync user out of its own vault), so a fresh host needs no manual chown. Config syncing is enforced on every start for all categories (theme, plugins and their data, hotkeys), so `.obsidian/` propagates between machines the same way it does with desktop sync; a headless client carries plugin and settings files without running the plugins itself. Each container links to the remote vault labeled with its vault name (the unique `OBSIDIAN_VAULT_NAME`, which is also the container-side mount target). The host folders are uniquely named (`~/<Org>/wiki-<org>`), while the remote vault labels deliberately keep the legacy names (`Anthers-Wiki`, `Software-Wiki`, …): nothing in the headless flow depends on a label matching its folder, only the mobile app renders the labels at all, and renaming a service's `OBSIDIAN_VAULT_NAME` ahead of its remote would create a new, empty remote vault and pull a full merge into it. The labels are also what keys ob's per-vault setup state in the shared `obsidian-headless-state` volume.
-
-Three cautions, borrowed from Obsidian's own docs and built into the workflow:
-
-- Back up the vaults before the first `make up` on a host. The initial link between a full local folder and a remote vault is a real merge, and it deserves an exit.
-- Run only one sync method per device. If the desktop app on a host also syncs one of these vaults, disable the Sync plugin for it; the headless container syncs the folder, and the desktop app just opens it.
-- If the Obsidian account uses 2FA, the automated login can't complete on its own. Log in interactively once (`docker compose -f docker-compose.phd-razer.yml run --rm --entrypoint sh obsidian-personal`, then `ob login --email <email>`); the token persists in the state volume and every other container picks it up.
 
 ## Quick Start
 
@@ -99,7 +87,7 @@ make up droplet           # or: make up phd-beelink
 | `pangolin/config/traefik/traefik_config.yml.template` | `traefik_config.yml` | `ACME_EMAIL` |
 | `pangolin/config/traefik/dynamic_config.yml.template` | `dynamic_config.yml` | `BASE_DOMAIN`, `CROWDSEC_LAPI_KEY` |
 
-The generated files are gitignored, so you must run `make setup` on each host after cloning. Do **not** copy the `.template` files directly — the `${VAR}` placeholders won't be substituted at runtime. The Obsidian Sync containers need nothing rendered; all of their config comes straight from `.env` (see the `obsidian sync` section there), and the image builds on the first `make up`.
+The generated files are gitignored, so you must run `make setup` on each host after cloning. Do **not** copy the `.template` files directly — the `${VAR}` placeholders won't be substituted at runtime.
 
 **Applying config changes:** `make setup <host>` re-renders the templates, but `make up <host>` won't restart a container whose service definition is unchanged — Docker Compose doesn't notice edits to the *contents* of bind-mounted config files. Traefik in particular reads its static config (`traefik_config.yml` — plugins, entry points, access logs) only at startup; only `dynamic_config.yml` is hot-reloaded by the file provider. So after changing any rendered Traefik config, force-recreate it:
 
