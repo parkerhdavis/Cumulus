@@ -25,13 +25,13 @@
 # Caution: per Obsidian's docs, run only ONE sync method per device — if the
 # desktop Obsidian app on this machine also syncs a vault that a container
 # here syncs, disable the desktop Sync plugin for it. The host folders are
-# uniquely named (~/<Org>/wiki-<org>), but the remote vault labels are still
-# the legacy ones (Anthers-Wiki, Software-Wiki, …), so the bind target and
-# OBSIDIAN_VAULT_NAME keep the label while the bind source carries the
-# folder name. Renaming a service's VAULT_NAME before its remote is renamed
-# would create a new, empty remote vault under the new name and pull a full
-# merge into it — rename remotes first (tracked task), then the two can re-
-# couple to the folder names.
+# uniquely named (~/<Org>/wiki-<org>), and the remote vault labels deliberately
+# stay the legacy ones (Anthers-Wiki, Software-Wiki, …; decided with Parker
+# 2026-10-16): nothing in the headless flow depends on a label matching its
+# folder, and only the mobile app renders the labels at all. Renaming a
+# service's VAULT_NAME while its remote still carries the old label would
+# create a new, empty remote vault under the new name and pull a full merge
+# into it — so the label and the folder name stay decoupled on purpose.
 x-obsidian-env: &obsidian-env
   OBSIDIAN_EMAIL: ${OBSIDIAN_EMAIL}
   OBSIDIAN_PASSWORD: ${OBSIDIAN_PASSWORD}
