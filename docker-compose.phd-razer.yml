@@ -1,8 +1,13 @@
 # phd-razer — Pangolin site and client agents.
 #
-# fosrl/pangolin-cli dials out to the Pangolin endpoint; its credentials are
-# the site's ID/secret pair from the Pangolin dashboard (RAZER_SITE_*). No
-# published ports — nothing to expose on the router.
+# fosrl/pangolin-cli dials out to the Pangolin endpoint. Both roles
+# authenticate with id/secret pairs from the Pangolin dashboard: the site
+# (RAZER_SITE_*) registers this machine's inbound tunnels, the machine client
+# (RAZER_MACHINE_*) opens outbound tunnels. Machines carry no CLI-side org or
+# exit-node selection and no role-based standing access — to reach a private
+# resource, that machine must be on the resource's Machine Clients list in
+# the dashboard; without any such grant the client connects but no tunnel
+# peer forms. No published ports — nothing to expose on the router.
 
 services:
   pangolin-site:
@@ -28,8 +33,11 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     network_mode: host
+    environment:
+      - PANGOLIN_ENDPOINT=https://pangolin.${BASE_DOMAIN}
+      - CLIENT_ID=${RAZER_MACHINE_ID}
+      - CLIENT_SECRET=${RAZER_MACHINE_SECRET}
     volumes:
-      - ./pangolin-client-config:/root/.config/pangolin
       - /etc/hosts:/host-etc/hosts
     entrypoint:
       - /bin/sh
@@ -46,4 +54,4 @@ services:
         # END pangolin-client
         EOF
         cat /tmp/hosts.new > "$$H"
-        exec /usr/local/bin/pangolin-cli up --attach
+        exec /usr/local/bin/pangolin-cli up --id "$$CLIENT_ID" --secret "$$CLIENT_SECRET" --endpoint "$$PANGOLIN_ENDPOINT" --attach

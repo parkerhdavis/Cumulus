@@ -20,7 +20,7 @@ The stack is split across four hosts, each with its own compose file:
 | Service | Description |
 |---------|-------------|
 | **[Pangolin CLI (site)](https://github.com/fosrl/cli)** | Inbound tunnel agent (`pangolin-site` container), authenticated with the site's ID/secret from `.env` |
-| **[Pangolin CLI (client)](https://github.com/fosrl/cli)** | Outbound tunnel agent (`pangolin-client` container), authenticated by a one-time interactive `pangolin login` persisted in `pangolin-client-config/`; also maintains the host's `.internal` entries in `/etc/hosts` |
+| **[Pangolin CLI (client)](https://github.com/fosrl/cli)** | Outbound tunnel agent (`pangolin-client` container), authenticated with the machine client's ID/secret from `.env` — headless, no login; to reach a private resource, the machine must be added to that resource's Machine Clients list in the dashboard; also maintains the host's `.internal` entries in `/etc/hosts` |
 | **[Jellyfin](https://github.com/jellyfin/jellyfin)** | Media server for movies, TV, music |
 | **[Immich](https://github.com/immich-app/immich)** | Self-hosted photo & video management |
 | **Immich ML** | Machine learning sidecar for face/object recognition |
